@@ -1,0 +1,271 @@
+\documentclass[10pt]{llncs}
+
+\usepackage[utf8]{inputenc}
+
+\usepackage{cite}
+\usepackage{hyperref}
+
+\usepackage{mathabx}
+
+\begin{document}
+
+\title{Approaches to apply Symbolic Execution in non-sequential applications}
+\author{Savu Victor-Gabriel}
+\institute{Technische Universität München, \email{victorsavu3@gmail.com}}
+\date{Today}
+\maketitle
+
+\begin{abstract}
+	In this paper we present multiple methods that have used symbolic execution in order to test or prove properties of non-sequential applications in different fields. Each approach has a distinct process and we will analyse its advantages and disadvantages while considering that some attempt to only reach a focused goal.
+\end{abstract}
+
+\section{Introduction}
+
+This paper is a comparison between 4 papers that use symbolic execution to non-sequential applications, each having a unique approach that applies this method and tries to solve some domain specific issues. All of the presented papers use concolic execution to drive the analysis, but have different goals and as such we will compare them on the ability to prove properties about applications.
+
+Each approach has different strengths and weaknesses that will be discussed in detail individually based on the examples proposed in each paper. We will be interested primarily in the applicability of this method, the required skill to use it, the covered inputs and the level of automation achieved. This provides a overview of capabilities and limitations for each.
+
+First we will present some general concepts in §\ref{concepts} that are used in the proceeding sections. We will continue by presenting 4 papers \cite{base3, base4, base5, base7} by describing each individually in §\ref{approaches} and then doing a comparison in §\ref{comparison}. Finally we will present our conclusions §\ref{conclusion}.
+
+\section{Concepts}
+\label{concepts}
+
+\subsection{Symbolic execution}
+
+Symbolic Execution involves replacing the input of a application with symbolic values in order to be able to test all feasible paths that an execution could take. Since concrete values are not used, instructions can no longer execute normally, but instead return symbolic expressions. Branches handled by following both paths, but using a different \emph{path condition}. This can not be done indefinitely and as such all loops in the application must be bounded.
+
+Simply applying naive symbolic execution to most practical applications will result in a path explosion that makes the process computationally very expensive. Fortunately multiple methods exist to deal with this problem.
+
+\subsection{Scheduling}
+
+This paper considers symbolic execution in the context of non-sequential applications and as such the scheduling of the threads of a application is a very important topic. It can be considered that the interleaving of the threads is a input to the application and all of them could be tested, but this is very computationally expensive.
+
+Fortunately there are many methods to deal with this such as DVC \cite{dvc} and iterative context bounding scheduling \cite{musuvathi2007iterative}.
+
+\subsubsection{Dynamic vector clocks (DVC)}
+
+We represent the execution of a program $P$ as a sequence of events $(t, l, m, a)$ where $t$ is a thread, $l$ is the label of an instruction, $m$ is a shared memory location and $a$ is the type of access [$r$ (read), $w$ (write), $l$ (lock), $u$ (unlock)]. If a instruction does not use memory $m$ and $a$ are $\bot$.
+
+In all paths $\pi \in $\textbf{Ex}$(P)$ two events can be \emph{sequentially related} $e \triangleleft e'$ if intuitively $e'$ always happens after $e$. $e \parallel e'$ iff $e \ntriangleleft e'$ and $e' \ntriangleleft e$. Events can also be \emph{race related} $e \lessdot e'$ if $e \parallel e'$, they access the same memory and intuitively could happen in parallel, but $e$ is first in this execution. Using these two partial orderings we can define the \emph{causal relation} $\preceq$ as $\triangleleft \cup \lessdot$.
+
+Using the \emph{causal relation} we create equivalence classes for the set of executions and define the \emph{representative set of executions} \textbf{REx} as the set that contains only one instance of each class. For all statements reachable in P there exists $\pi \in$ \textbf{REx} such that the statement is executed in $\pi$ \cite[§4]{base4}.
+
+Dynamic vector clocks are used to determine which statements are in a causal relationship. They are created by executed the following for each event $(t, l, m, a)$ and initializing all clocks to $0$.
+
+\begin{itemize}
+	\item if $a = r$ or $w$ or $l$ or $u$ then $V_t \leftarrow V_t + 1$
+	\item if $a = r$ then $V_t \leftarrow max \left\lbrace V_t, V_m^w \right\rbrace$ and $V_m^a \leftarrow max \left\lbrace V_m^a, V_t \right\rbrace$
+	\item  if $a = w$ or $l$ or $u$ then $V_m^w \leftarrow V_m^a \leftarrow V_t \leftarrow \left\lbrace V_m^a, V_t \right\rbrace$
+	\item if $e$ is of the form $fork(l)$ then $V_{t'} \leftarrow V_t$ and $V_t \leftarrow V_t + 1$ and $V_{t'} \leftarrow V_{t'} + 1$
+\end{itemize}
+
+The DVC of a event $V_e$ is $V_t$ right after e has been executed. After this has been computed the following hold:
+
+\begin{itemize}
+	\item $e \preceq e'$ if $V_e \leq V_{e'}$
+	\item $e \lessdot e'$ if $V_e \leq V_{e'}$ and $V_{prev(e')} \neq V_e$, prev(e) is the event that precedes e
+\end{itemize}
+
+\subsubsection{Iterative context bounding scheduling}
+
+\subsection{Concolic testing}
+
+\section{Approaches}
+\label{approaches}
+
+\subsection{Parallel Symbolic Execution for Automated Real-World Software Testing \cite{base3}}
+
+This paper describes a very practical approach to symbolic execution and its uses in software testing. It extends \texttt{KLEE} \cite{klee} in order to provide a more complete POSIX environment that is able to symbolically execute multiple complex applications as can be seen in Fig. \ref{example:3}. The simplicity of this method from a programming perspective makes this a very good alternative to the standard unit tests used by most projects and it can also be applied to existing software without any extensive additional work.
+
+The symbolic POSIX environment has full support for threads, but unfortunately this implementation is not aimed specifically at finding subtle concurrency issues. It uses a cooperative scheduler by default, but also offers iterative context bounding scheduling \cite{Musuvathi} and exhaustive exploration for all possible schedulings and so is able to find issues when the programmer is specifically testing for them.
+
+The biggest advantage of this approach is the level of automation achieved by splitting the workload between multiple machines. The programmer does not need to understand the internals of their framework and can still write symbolic tests. The inefficiencies are simply solved by ``throwing more hardware at it''.
+
+\begin{figure}
+	\centering
+	
+	\begin{tabular}{l l l}
+		System & Version & Size (KLOC) \\
+		\hline
+		Apache httpt & 2.2.16 & 226.4 \\
+		Lighttpd & 1.4.28 & 39.5 \\
+		Ghttpd & 1.4.4 & 0.6 \\
+		Memcached & 1.4.5 & 8.3 \\
+		Python & 2.6.5 & 388.3 \\
+		Curl & 7.21.1 & 65.9 \\
+		Rsync & 3.0.7 & 35.6 \\
+		Pbzip & 2.1.1 & 3.6 \\
+		Libevent & 1.4.14 & 10.2 \\
+		Coreutils & 6.10 & 72.1 \\
+		Bandicoot & 1.0 & 6.4
+	\end{tabular}
+	
+	\caption{Example of tested software, taken from \cite{base3}}
+	\label{example:3}
+\end{figure}
+
+\subsection{Concolic Testing of Multithreaded Programs and	Its Application to Testing Security Protocols \cite{base4}}
+
+This approach is based on concolic testing, but it also applies this concept to the scheduler. This allows its implementation, \texttt{jCUTE}, to find many types of bugs in a very short amount of time. \texttt{jCUTE} works on java code by first translating it into the simpler \texttt{SCIL} language and was successfully applied to multiple codebases.
+
+The greatest advantage of this method is the usage of DVC in order to reduce the amount of work necessary to analyse all possible executions. This is done by applying concolic testing not only to the inputs, but also to the scheduling of the threads. We will concisely present how the efficient algorithm shown in the paper chooses inputs and schedules.
+
+First the program is executed with some input and a path is generated. The path is then walked backwards and the algorithm attempts to find either a new schedule or a new input. A new schedule is chosen if there is the possibility to invert a immediate race on the path, otherwise it is attempted to create a new input by negating the constraint of a branch along the path and solving the new system. The generation of a new schedule is done by postponing events such that the race is flipped.
+
+The efficient algorithm tests all feasible paths if properties hold:
+
+\begin{itemize}
+	\item The program terminates
+	\item No approximations are made
+	\item All satisfiable constraints can be solved
+\end{itemize}
+
+This approach has been successfully been used to find numerous bugs in the Java 1.4 collection library that are only exhibited when concurrency is involved as can be seen in Fig. \ref{example:4}. The table also shows the performance achieved by this implementation ans also shows one unique aspect. The longer this method runs the closer it gets to completeness, but reasonable results can already be found much faster.
+
+\begin{figure}
+	\centering
+	
+	\begin{tabular}{l l l l}
+		Vector & Run Tile & Branch coverage & Bugs \\
+		 & & & race/deadlock/infinite loop/exceptions \\
+		 
+		\hline
+		
+		Vector & 5519 & 76.38 & 1/9/0/2 \\
+		ArrayList & 6811 & 75 & 3/9/0/3 \\
+		LinkedList & 4401 & 82.05 & 3/3/1/1 \\
+		LinkedHashSet & 7303 & 67.39 & 3/9/0/2 \\
+		TreeSet & 7333 & 54.93 & 4/9/0/2 \\
+		HashSet & 7449 & 69.56 & 19/9/0/2 \\
+	\end{tabular}
+	
+	\caption{Example of tested software, taken from \cite{base4}}
+	\label{example:4}
+\end{figure}
+
+\subsection{Generalized Symbolic Execution for Model Checking and Testing \cite{base5}}
+
+This approach combines model checking and symbolic execution in order to test the correctness of multithreaded applications operating on dynamically located data structures such as trees and lists. It is able to cope with unbounded input by using lazy initialization and can be used to test java code.
+
+The lazy initialization works by branching when a object is created and a field is accessed. When a new object is created it is assigned the values \texttt{null} or a new value with all reference fields uninitialized. When a uninitialized field is accessed it is assigned \texttt{null}, a new value or a existing value in order to test for aliasing. All primitive instances and fields are initialized to symbolic values. This allows the analysis to be performed on unbounded input by not considering the unused part.
+
+The implementation consists of a modification of the \texttt{javac} compiler, the \emph{Korat} tool \cite{korat} and \emph{Java PathFinder} \cite{pathfinder} as a model checker. Concurrency is considering by analyzing all possible thread interleavings using JPF.
+
+The biggest advantage of this method is the ability to test functions with unbounded input and to prove that they are correct in all circumstances. Another advantage is the generation of actual test data in case a error is found by using \emph{Korat}. A large disadvantage is the fact that programs with many primitive values will fall back to normal symbolic execution and model checking, so this approach is only suitable for some applications.
+
+\subsection{GKLEE: concolic verification and test generation for GPUs \cite{base7}}
+
+This paper presents \emph{GKLEE}, a extention of \emph{KLEE} \cite{klee} that has been designed to analyse CUDA programs. GPU programs are massively concurrent and this implementation is able to deal with this by using the semantics of the device to reduce the amount of interleaving that must be tested.
+
+The only reason \emph{GKLEE} can analyse an application in a reasonable amount of time is the utilization of canonical scheduling. This is achieved by executing a thread until it reaches a barrier call and only then moving on to another one. During this execution all reads and writes are recorded and they are checked for conflicts using SMT-solving.
+
+\emph{GKLEE} fully models the CUDA memory, threading and synchronization properties and is aware of the fact that they differ between different hardware implementations. As such it is able to report problems that will only occur when changing the device or the CUDA version.
+
+This implementation is able to find a surprising amount of problems in applications:
+
+\begin{description}
+	\item[Deadlocks] \hfill \\
+		When not all threads reach a barrier.
+	\item[Intra-Warp Races without warp divergence]  \hfill \\
+		Write-Write races between threads in the same warp.
+	\item[Intra-Warp Races with warp divergence] \hfill \\
+		SIMD does both if and else at the same time. The ordering is device dependent and should not be depended on.
+	\item[Inter-Warp Races] \hfill \\
+		Write-Write, Write-Read and Read-Write races between threads in different warps.
+	\item[Global memory races] \hfill \\
+		Races involving global memory.
+	\item[Shared memory bank conflicts] \hfill \\
+		Specific access pasterns of data in shared memory will reduce performance. These patterns differ between CUDA versions.
+	\item[Non-coalesced Device Memory Accesses]
+		Specific access pasterns of data in the device memory will reduce performance. These patterns differ between CUDA versions.
+	\item[Missing volatile modifier]
+		Subtle bug that only occurs when optimizations are turned on. Only CUDA 5.x does this optimization.
+\end{description}
+
+These problems are very hard to detect using traditional methods such as testing and debugging as they depend on a specific scheduling to trigger or only occur on different hardware. Some examples of tested kernels are provided in Fig. \ref{example:7}.
+
+\begin{figure}
+	\centering
+	
+	\begin{tabular}{l l l l l l l}
+		Kernel & Race & Correct & \#Threads & \multicolumn{2}{c}{Bank Conflict} & Warp divergence\\
+		& & & & 1.x & 2.x & \\
+		\hline
+		
+		Bitonic Sort & & yes & 4 & 0\% & 0\% & 60\% \\
+		Bisect Small & WW & - & 16 & 15\% & 0\% & 53\% \\
+		Scan Best & & yes & 32 & 71\% & 71\% & 71\%
+	\end{tabular}
+	
+	\caption{Example of tested software, taken from \cite{base7}}
+	\label{example:7}
+\end{figure}
+
+This method is very specific in its goal and is very capable in its domain, but unfortunately it can not be extended to be more generic.
+
+\section{Comparison}
+\label{comparison}
+
+As we have presented there are multiple methods that apply symbolic execution to concurrent applications and each is capable of contributing information about the analyzed program. \emph{Parallel Symbolic Execution for Automated Real-World Software Testing} \cite{base3} is the most practical approach, requiring almost no skill and no special knowledge, and can provide a useful alternative to standard testing. In contrast \emph{Verifying Concurrent Systems with Symbolic Execution} \cite{base2} is able to prove multiple properties and considers the entire input domain, but it is very hard to use and requires extensive knowledge in the field in order to be applied. In the authors opinion these contribute the most broadly usable implementations and can be used together since their goals differ substantially.
+
+\emph{Concolic Testing of Multithreaded Programs and Its Application to Testing Security Protocols} \cite{base4} incorporates some very efficient algorithms that improve the performance of the symbolic execution considerably and is able to generate quick results even for existing applications. The integration of this method in other tools would be a very positive outcome.
+
+\emph{Generalized Symbolic Execution for Model Checking and Testing \cite{base5}} presents a method to test object oriented code that is able to deal with some constructs more efficiently than before. Its algorithm could also be integrated into some other tools, but it would be of limited impact.
+
+\emph{Using model checking with symbolic execution to verify parallel numerical programs} \cite{base1} and \emph{Symbolic crosschecking of floating-point and SIMD code} \cite{base6} help with handling floating point values in the context of symbolic execution and their results can be integrated in other approaches. The implementations however are limited by the bounded inputs and by the large execution time required.
+
+\emph{GKLEE: concolic verification and test generation for GPUs \cite{base7}} is a very capable implementation, but it is very limited in scope and can not be extended to test other types of applications.
+
+Fig. \ref{comp table} gives a tabular overview of the presented methods and their capabilities and limitations. As can be seen the choice for the implementation is as diverse as the platforms covered.
+
+\begin{figure}
+	\centering
+	
+	\begin{tabular}{l l l l l l}
+		& & Method & Goal & Required skills & Automation \\
+		\hline
+		§2.1 & \cite{base1} & Model checking & proof & medium & almost complete \\
+		§2.2 & \cite{base2} & Theorem prover & proof & high & requires interaction \\
+		§2.3 & \cite{base3} & Concolic testing & testing & none & full \\
+		§2.4 & \cite{base4} & Concolic testing & proof/testing & none & full \\
+		§2.5 & \cite{base5} & Model checking & testing & none & full \\
+		§2.6 & \cite{base6} & Model checking & testing & low & almost complete \\
+		§2.7 & \cite{base7} & Concolic testing & testing & low & full
+	\end{tabular}
+	
+	\begin{tabular}{l l l l l}
+		& & Applicability & Performance & Input\\
+		\hline
+		§2.1 & \cite{base1} & model & low & bounded, small, full symbolic\\
+		§2.2 & \cite{base2} & abstract model & low & entire domain \\
+		§2.3 & \cite{base3} & existing software & high & tests \\
+		§2.4 & \cite{base4} & some existing software & medium & tests \\
+		§2.5 & \cite{base5} & some existing software & low & tests \\
+		§2.6 & \cite{base6} & existing software & low & tests \\
+		§2.7 & \cite{base7} & existing software & high & tests
+	\end{tabular}
+	
+	\begin{tabular}{l l l l}
+		& & Input size & Type of applications \\
+		\hline
+		§2.1 & \cite{base1} & small & MPI \\
+		§2.2 & \cite{base2} & unbounded & abstract \\
+		§2.3 & \cite{base3} & large & POSIX \\
+		§2.4 & \cite{base4} & small & Java \\
+		§2.5 & \cite{base5} & unbounded & Java \\
+		§2.6 & \cite{base6} & small & SSE \\
+		§2.7 & \cite{base7} & medium & CUDA GPU
+	\end{tabular}
+	
+	\caption{Comparison Tables}
+	\label{comp table}
+\end{figure}
+
+\section{Conclusion}
+\label{conclusion}
+
+As recent developments in CPUs move towards multiple cores, concurrency becomes a requirement of modern software. The approaches presented in this paper shows that symbolic execution is a tool that is able to help in the development of such applications as normal testing becomes more and more time consuming and error prone or even impossible. The diversified methods prove that the field has still not been thoroughly studied and that many more developments will be made in the future.
+
+\bibliography{ref}
+\bibliographystyle{splncs03}
+\end{document}
