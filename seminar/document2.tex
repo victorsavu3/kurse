@@ -32,13 +32,13 @@ First we will present some general concepts in §\ref{concepts} that are used in
 
 \subsection{Symbolic execution}
 
-Symbolic Execution involves replacing the input of a application with symbolic values in order to be able to test all feasible paths that an execution could take. Since concrete values are not used, instructions can no longer execute normally, but instead return symbolic expressions. Branches handled by following both paths, but using a different \emph{path condition}. This can not be done indefinitely and as such all loops in the application must be bounded.
+Symbolic Execution involves replacing the input of a application with symbolic values in order to be able to test all feasible paths that an execution could take. Since concrete values are not used, instructions can no longer execute normally, but instead return symbolic expressions. Branches handled by following both paths, but using a different \emph{path condition}. This method allows an automated tool or a human to check properties of the program being executed. The most important aspects that are checked in the following paper are assertions during the execution and the final result.
 
-Simply applying naive symbolic execution to most practical applications will result in a path explosion that makes the process computationally very expensive. Fortunately multiple methods exist to deal with this problem.
+Unfortunately symbolic execution has some limitations that make its application difficult. Firstly it is impossible to use it on programs that have unbounded loops as the path condition would grow indefinitely. This limitation can be worked around in specific situations as can be seen in \cite{base5}, but generally it is required that loops are bounded artificially. Secondly most implementations are unable to handle floating point symbolic values as operations on them do not have a precise result. Dealing with this issue is difficult as can be seen in \cite{base1}.
 
 \subsection{Scheduling}
 
-This paper considers symbolic execution in the context of non-sequential applications and as such the scheduling of the threads of a application is a very important topic. It can be considered that the interleaving of the threads is a input to the application and all of them could be tested, but this is very computationally expensive.
+This paper considers symbolic execution in the context of non-sequential applications and as such the scheduling of the threads of a application is a very important topic. In order to check such a program all possible thread interleavings must be analyzed, but this is very computationally expensive. 
 
 Fortunately there are many methods to deal with this such as DVC \cite{dvc} and iterative context bounding scheduling \cite{musuvathi2007iterative}.
 
@@ -59,14 +59,18 @@ Dynamic vector clocks are used to determine which statements are in a causal rel
 	\item if $e$ is of the form $fork(l)$ then $V_{t'} \leftarrow V_t$ and $V_t \leftarrow V_t + 1$ and $V_{t'} \leftarrow V_{t'} + 1$
 \end{itemize}
 
-The DVC of a event $V_e$ is $V_t$ right after e has been executed. After this has been computed the following hold:
+The DVC of a event $V_e$ is $V_t$ right after e has been executed. After this has been computed the following hold \cite[§4]{base4}:
 
 \begin{itemize}
 	\item $e \preceq e'$ if $V_e \leq V_{e'}$
 	\item $e \lessdot e'$ if $V_e \leq V_{e'}$ and $V_{prev(e')} \neq V_e$, prev(e) is the event that precedes e
 \end{itemize}
 
+These properties help to check which events always happen in a specific order or if they could be reversed with another scheduling.
+
 \subsubsection{Iterative context bounding scheduling}
+
+
 
 \subsection{Concolic testing}
 
@@ -79,7 +83,9 @@ This paper describes a very practical approach to symbolic execution and its use
 
 The symbolic POSIX environment has full support for threads, but unfortunately this implementation is not aimed specifically at finding subtle concurrency issues. It uses a cooperative scheduler by default, but also offers iterative context bounding scheduling \cite{Musuvathi} and exhaustive exploration for all possible schedulings and so is able to find issues when the programmer is specifically testing for them.
 
-The biggest advantage of this approach is the level of automation achieved by splitting the workload between multiple machines. The programmer does not need to understand the internals of their framework and can still write symbolic tests. The inefficiencies are simply solved by ``throwing more hardware at it''.
+A important development presented by this paper is the parallelization of the symbolic execution in order to reduce the duration by using multiple computers. This improvement helps the implementation to become practical when testing existing large codebases.
+
+The biggest advantage of this approach is the level of automation achieved. The programmer does not need to understand the internals of their framework in order to write symbolic tests. The inefficiencies caused by the limited experience are simply solved by ``throwing more hardware at it''. This is very different when compared to the other papers where most examples required some manual intervention to make them work.
 
 \begin{figure}
 	\centering
