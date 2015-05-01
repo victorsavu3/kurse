@@ -42,7 +42,7 @@ This paper considers symbolic execution in the context of non-sequential applica
 
 Fortunately there are many methods to deal with this such as DVC \cite{dvc} and iterative context bounding scheduling \cite{musuvathi2007iterative}.
 
-\subsubsection{Dynamic vector clocks (DVC)}
+\subsubsection{Dynamic vector clocks (DVC)} are a method to eliminate the need to analyse all possible thread interleavings, but still do a complete analysis.
 
 We represent the execution of a program $P$ as a sequence of events $(t, l, m, a)$ where $t$ is a thread, $l$ is the label of an instruction, $m$ is a shared memory location and $a$ is the type of access [$r$ (read), $w$ (write), $l$ (lock), $u$ (unlock)]. If a instruction does not use memory $m$ and $a$ are $\bot$.
 
@@ -68,11 +68,25 @@ The DVC of a event $V_e$ is $V_t$ right after e has been executed. After this ha
 
 These properties help to check which events always happen in a specific order or if they could be reversed with another scheduling.
 
-\subsubsection{Iterative context bounding scheduling}
+\subsubsection{Iterative context bounding}
 
+is a very simple search strategy that allows the analysis of applications to find most bugs faster. It assumes that a context switch may only happen when a thread is preempted or it goes to sleep and limits the number of preemptions to a fixed value $c$ during symbolic execution. If all possible executions do not present bugs it proves that $c+1$ preeptions are required for one to happen. The power of this algorithm comes from the fact that even with a bound of 0 the execution will either terminate or deadlock because the choices of the scheduler are not bounded during normal execution. 
 
+A very important property when applying iterative context bounding is the fact that the number of executions of a program $P$ is polynomial in regards to $k$, the number of steps a thread takes and exponential in $c$ \cite{iterativecontextbound}. Since most concurrency bugs happen when a small number of preemptions ($ < 8$ \cite[§4.1]{iterativecontextbound}) are present makes this a very desirable property.
 
 \subsection{Concolic testing}
+
+Concolic testing is a technique used in symbolic execution that focuses more on finding bugs instead of proving program correctness. It involves running the application with a concrete input and then using a \emph{satisfiability modulo theories} (SMT) solver in order to generate a new input.
+
+The execution during concolic testing uses the normal instructions of the environment, but all branches are added to the path condition. In order to generate a new input one of the branch conditions is inverted and the new system is solved. All paths of a program are considered only if the SMT solver is sufficiently powerful and as such program correctness can not always be proven.
+
+There are multiple tools that implement concolic testing and we will present some interesting results in §\ref{approaches}:
+
+\begin{itemize}
+	\item KLEE \cite{klee}
+	\item CUTE and jCUTE \cite{base4}
+	\item CATG
+\end{itemize}
 
 \section{Approaches}
 \label{approaches}
@@ -81,9 +95,17 @@ These properties help to check which events always happen in a specific order or
 
 This paper describes a very practical approach to symbolic execution and its uses in software testing. It extends \texttt{KLEE} \cite{klee} in order to provide a more complete POSIX environment that is able to symbolically execute multiple complex applications as can be seen in Fig. \ref{example:3}. The simplicity of this method from a programming perspective makes this a very good alternative to the standard unit tests used by most projects and it can also be applied to existing software without any extensive additional work.
 
-The symbolic POSIX environment has full support for threads, but unfortunately this implementation is not aimed specifically at finding subtle concurrency issues. It uses a cooperative scheduler by default, but also offers iterative context bounding scheduling \cite{Musuvathi} and exhaustive exploration for all possible schedulings and so is able to find issues when the programmer is specifically testing for them.
+A important development presented by this paper is the parallelization of the symbolic execution in order to reduce the duration by using multiple computers. This improvement helps the implementation to become practical when testing existing large codebases. There are two requirements when splitting the work, the parts must be disjoint and together they must cover all possible paths. This achieved by creating a binary execution tree, where each node contains the branching decision. Each computer only sees a part of this tree and categorises nodes in three types:
 
-A important development presented by this paper is the parallelization of the symbolic execution in order to reduce the duration by using multiple computers. This improvement helps the implementation to become practical when testing existing large codebases.
+\begin{description}
+	\item[Dead nodes] Nodes that have already been considered
+	\item[Candidate Nodes] Nodes that can be processed by this instance. All candidates on all machines represent the exploration frontier.
+	\item[Fence Nodes] Nodes that are being processed by another instance.
+\end{description}
+
+A load balancer handles the distribution of work across all machines. When the exploration frontier becomes unbalanced it requests a Worker-to-Worker Job Transfer. This requires one instance to mark nodes as fence nodes and to send them to another instance. The actual data that is sent is the path from the root to that node and the receiver must reexecute it in order to obtain the actual state.
+
+The symbolic POSIX environment has full support for threads, but unfortunately this implementation is not aimed specifically at finding subtle concurrency issues. It uses a cooperative scheduler by default, but also offers iterative context bounding scheduling \cite{Musuvathi} and exhaustive exploration for all possible schedulings and so is able to find issues when the programmer is specifically testing for them. The implementation extends KLEE in order to handle multiple address spaces and adds some new system calls to be able this functionality. The pthreads library is then reimplemented using the new primitives. The execution path remains serial and thread switches are done by a call to \texttt{cloud9\_thread\_sleep} or \texttt{cloud9\_thread\_preempt}.
 
 The biggest advantage of this approach is the level of automation achieved. The programmer does not need to understand the internals of their framework in order to write symbolic tests. The inefficiencies caused by the limited experience are simply solved by ``throwing more hardware at it''. This is very different when compared to the other papers where most examples required some manual intervention to make them work.
 
@@ -153,19 +175,26 @@ This approach has been successfully been used to find numerous bugs in the Java 
 
 This approach combines model checking and symbolic execution in order to test the correctness of multithreaded applications operating on dynamically located data structures such as trees and lists. It is able to cope with unbounded input by using lazy initialization and can be used to test java code.
 
-The lazy initialization works by branching when a object is created and a field is accessed. When a new object is created it is assigned the values \texttt{null} or a new value with all reference fields uninitialized. When a uninitialized field is accessed it is assigned \texttt{null}, a new value or a existing value in order to test for aliasing. All primitive instances and fields are initialized to symbolic values. This allows the analysis to be performed on unbounded input by not considering the unused part.
+The lazy initialization works on java objects by branching when it or one of its fields is accessed. When a uninitialized object is accessed it is assigned the values \texttt{null} or a new value with all reference fields uninitialized. When a uninitialized field is accessed it is assigned \texttt{null}, a new value or a existing value in order to test for aliasing. Preconditions can be used to limit the values to what a method actually expects. All primitive instances and fields are initialized to symbolic values. This allows the analysis to be performed on unbounded input by simply not considering the unused parts.
 
-The implementation consists of a modification of the \texttt{javac} compiler, the \emph{Korat} tool \cite{korat} and \emph{Java PathFinder} \cite{pathfinder} as a model checker. Concurrency is considering by analyzing all possible thread interleavings using JPF.
+The implementation consists of a modification of the \texttt{javac} compiler, the \emph{Korat} tool \cite{korat} and \emph{Java PathFinder} \cite{pathfinder} as a model checker. \texttt{javac} is modified in order to instrument all primitive values and operations and in to intercept all field accesses. JPF is used to actually test given preconditions, post-conditions, assertions and safety properties explicitly written by the tester. Concurrent applications are tested by evaluating all possible thread interleavings, but fortunately JPF can somewhat reduce the state space explosion.
 
 The biggest advantage of this method is the ability to test functions with unbounded input and to prove that they are correct in all circumstances. Another advantage is the generation of actual test data in case a error is found by using \emph{Korat}. A large disadvantage is the fact that programs with many primitive values will fall back to normal symbolic execution and model checking, so this approach is only suitable for some applications.
 
 \subsection{GKLEE: concolic verification and test generation for GPUs \cite{base7}}
 
-This paper presents \emph{GKLEE}, a extention of \emph{KLEE} \cite{klee} that has been designed to analyse CUDA programs. GPU programs are massively concurrent and this implementation is able to deal with this by using the semantics of the device to reduce the amount of interleaving that must be tested.
+This paper presents \emph{GKLEE}, a extention of \emph{KLEE} \cite{klee} that has been designed to analyse CUDA programs. GPU programs are massively concurrent and this implementation is able to deal with this by using the semantics of the device to drastically reduce the amount of interleaving that must be tested.
 
-The only reason \emph{GKLEE} can analyse an application in a reasonable amount of time is the utilization of canonical scheduling. This is achieved by executing a thread until it reaches a barrier call and only then moving on to another one. During this execution all reads and writes are recorded and they are checked for conflicts using SMT-solving.
+We will shortly present some concepts of CUDA that are required for the rest of this section:
 
-\emph{GKLEE} fully models the CUDA memory, threading and synchronization properties and is aware of the fact that they differ between different hardware implementations. As such it is able to report problems that will only occur when changing the device or the CUDA version.
+\begin{description}
+	\item[Memory layout] There is one block of global memory, one block of memory for each block of threads and one block of memory for each thread.
+	\item[Warp] A group of 32 threads is called a warp. All warps execute the same instruction at the same time, so it is possible that both options in a branch are processed for each thread.
+	\item[Block] A group of threads, organized in warps that have some shared memory separate from the global memory. Threads can synchronize using barriers. All blocks have the same size.
+	\item[Barrier] The only synchronization primitive provided by the hardware.
+\end{description}
+
+The only reason \emph{GKLEE} can analyse an application in a reasonable amount of time is the utilization of canonical scheduling. This is achieved by executing a thread until it reaches a barrier call and only then moving on to another one since preemption is not possible on the hardware. During this execution all reads and writes are recorded and they are checked for conflicts with other threads using a SMT solver. Since warps execute simultaneously no unexpected races can occur between threads on the same hardware. \emph{GKLEE} is aware of the differences between CUDA versions and of the undefined behavior of the environment and can also detect races in the same warp.
 
 This implementation is able to find a surprising amount of problems in applications:
 
@@ -175,7 +204,7 @@ This implementation is able to find a surprising amount of problems in applicati
 	\item[Intra-Warp Races without warp divergence]  \hfill \\
 		Write-Write races between threads in the same warp.
 	\item[Intra-Warp Races with warp divergence] \hfill \\
-		SIMD does both if and else at the same time. The ordering is device dependent and should not be depended on.
+		SIMT executes both if and else at the same time. The ordering is device dependent and should not be depended on.
 	\item[Inter-Warp Races] \hfill \\
 		Write-Write, Write-Read and Read-Write races between threads in different warps.
 	\item[Global memory races] \hfill \\
@@ -188,7 +217,7 @@ This implementation is able to find a surprising amount of problems in applicati
 		Subtle bug that only occurs when optimizations are turned on. Only CUDA 5.x does this optimization.
 \end{description}
 
-These problems are very hard to detect using traditional methods such as testing and debugging as they depend on a specific scheduling to trigger or only occur on different hardware. Some examples of tested kernels are provided in Fig. \ref{example:7}.
+These problems are very hard to detect using traditional methods such as testing and debugging as they are only triggered on a specific scheduling and hardware. The presented performance bottlenecks are also very useful, especially since they are individualized for hardware and CUDA version.  Some examples of tested kernels are provided in Fig. \ref{example:7}.
 
 \begin{figure}
 	\centering
@@ -207,60 +236,49 @@ These problems are very hard to detect using traditional methods such as testing
 	\label{example:7}
 \end{figure}
 
-This method is very specific in its goal and is very capable in its domain, but unfortunately it can not be extended to be more generic.
+This method is very specific in its goal and is very capable in its domain and shows that concolic testing applied to a more limited architecture can provide substantially more results. Similar tools could be designed for OpenCL and other limitede architectures, but unfortunately the method presented in this paper can no be extended to arbitrary architectures.
 
 \section{Comparison}
 \label{comparison}
 
-As we have presented there are multiple methods that apply symbolic execution to concurrent applications and each is capable of contributing information about the analyzed program. \emph{Parallel Symbolic Execution for Automated Real-World Software Testing} \cite{base3} is the most practical approach, requiring almost no skill and no special knowledge, and can provide a useful alternative to standard testing. In contrast \emph{Verifying Concurrent Systems with Symbolic Execution} \cite{base2} is able to prove multiple properties and considers the entire input domain, but it is very hard to use and requires extensive knowledge in the field in order to be applied. In the authors opinion these contribute the most broadly usable implementations and can be used together since their goals differ substantially.
+As we have presented there are multiple methods that apply symbolic execution to concurrent applications and each is capable of contributing information about the analyzed program. \emph{Parallel Symbolic Execution for Automated Real-World Software Testing} \cite{base3} is the most practical approach, requiring almost no skill and no special knowledge, and can provide a useful alternative to standard testing.
 
 \emph{Concolic Testing of Multithreaded Programs and Its Application to Testing Security Protocols} \cite{base4} incorporates some very efficient algorithms that improve the performance of the symbolic execution considerably and is able to generate quick results even for existing applications. The integration of this method in other tools would be a very positive outcome.
 
 \emph{Generalized Symbolic Execution for Model Checking and Testing \cite{base5}} presents a method to test object oriented code that is able to deal with some constructs more efficiently than before. Its algorithm could also be integrated into some other tools, but it would be of limited impact.
 
-\emph{Using model checking with symbolic execution to verify parallel numerical programs} \cite{base1} and \emph{Symbolic crosschecking of floating-point and SIMD code} \cite{base6} help with handling floating point values in the context of symbolic execution and their results can be integrated in other approaches. The implementations however are limited by the bounded inputs and by the large execution time required.
-
-\emph{GKLEE: concolic verification and test generation for GPUs \cite{base7}} is a very capable implementation, but it is very limited in scope and can not be extended to test other types of applications.
+\emph{GKLEE: concolic verification and test generation for GPUs \cite{base7}} is a very capable implementation, but it is very limited in scope and can not be extended to test other types of applications. Some concepts could be adapted to other similar architectures, especially the canonical scheduling.
 
 Fig. \ref{comp table} gives a tabular overview of the presented methods and their capabilities and limitations. As can be seen the choice for the implementation is as diverse as the platforms covered.
 
+In this authors opinion all techniques described in the presented papers offer some improvement to the field of concolic testing, but \emph{Concolic Testing of Multithreaded Programs and Its Application to Testing Security Protocols} is the most useful approach. It is the only one able to analyse large practical applications and could be extended to apply the improvements from \cite{base4} and \cite{base5}. Its low requirements from the perspective of the tester makes it very attractive to existing software that intends to extend its testing suite which would considerably improve its quality.
+
 \begin{figure}
-	\centering
-	
 	\begin{tabular}{l l l l l l}
 		& & Method & Goal & Required skills & Automation \\
 		\hline
-		§2.1 & \cite{base1} & Model checking & proof & medium & almost complete \\
-		§2.2 & \cite{base2} & Theorem prover & proof & high & requires interaction \\
 		§2.3 & \cite{base3} & Concolic testing & testing & none & full \\
-		§2.4 & \cite{base4} & Concolic testing & proof/testing & none & full \\
-		§2.5 & \cite{base5} & Model checking & testing & none & full \\
-		§2.6 & \cite{base6} & Model checking & testing & low & almost complete \\
-		§2.7 & \cite{base7} & Concolic testing & testing & low & full
+		§2.4 & \cite{base4} & Concolic testing & proof/testing & low & full \\
+		§2.5 & \cite{base5} & Model checking & testing & low & full \\
+		§2.7 & \cite{base7} & Concolic testing & testing & medium & full
 	\end{tabular}
 	
 	\begin{tabular}{l l l l l}
 		& & Applicability & Performance & Input\\
 		\hline
-		§2.1 & \cite{base1} & model & low & bounded, small, full symbolic\\
-		§2.2 & \cite{base2} & abstract model & low & entire domain \\
 		§2.3 & \cite{base3} & existing software & high & tests \\
 		§2.4 & \cite{base4} & some existing software & medium & tests \\
 		§2.5 & \cite{base5} & some existing software & low & tests \\
-		§2.6 & \cite{base6} & existing software & low & tests \\
 		§2.7 & \cite{base7} & existing software & high & tests
 	\end{tabular}
 	
-	\begin{tabular}{l l l l}
-		& & Input size & Type of applications \\
+	\begin{tabular}{l l l ll }
+		& & Input size & Type of applications & Scalability to multiple threads \\
 		\hline
-		§2.1 & \cite{base1} & small & MPI \\
-		§2.2 & \cite{base2} & unbounded & abstract \\
-		§2.3 & \cite{base3} & large & POSIX \\
-		§2.4 & \cite{base4} & small & Java \\
-		§2.5 & \cite{base5} & unbounded & Java \\
-		§2.6 & \cite{base6} & small & SSE \\
-		§2.7 & \cite{base7} & medium & CUDA GPU
+		§2.3 & \cite{base3} & large & POSIX & high/ imprecise \\
+		§2.4 & \cite{base4} & small & Java & high \\
+		§2.5 & \cite{base5} & unbounded & Java & low \\
+		§2.7 & \cite{base7} & medium & CUDA GPU & very high
 	\end{tabular}
 	
 	\caption{Comparison Tables}
@@ -270,7 +288,7 @@ Fig. \ref{comp table} gives a tabular overview of the presented methods and thei
 \section{Conclusion}
 \label{conclusion}
 
-As recent developments in CPUs move towards multiple cores, concurrency becomes a requirement of modern software. The approaches presented in this paper shows that symbolic execution is a tool that is able to help in the development of such applications as normal testing becomes more and more time consuming and error prone or even impossible. The diversified methods prove that the field has still not been thoroughly studied and that many more developments will be made in the future.
+As recent developments in CPUs move towards multiple cores, concurrency becomes a requirement rather than an option in modern software development. The approaches presented in this paper shows that symbolic execution is a tool that is able to help in the development of such applications as normal testing becomes time consuming, error prone or even impossible. The diversified methods and improvements prove that the field has still not been thoroughly studied and that hopefully many more developments will be made in the future.
 
 \bibliography{ref}
 \bibliographystyle{splncs03}
