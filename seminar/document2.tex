@@ -21,24 +21,24 @@
 
 \section{Introduction}
 
-This paper is a comparison between 4 papers that use symbolic execution to non-sequential applications, each having a unique approach that applies this method and tries to solve some domain specific issues. All of the presented papers use concolic execution to drive the analysis, but have different goals and as such we will compare them on the ability to prove properties about applications.
+This paper is a comparison between 4 approaches that apply symbolic execution on non-sequential applications, each having a unique aspect that attempts to solve a domain specific problem. All of the presented papers use concolic execution to drive the analysis, but have different goals and as such we will compare them on the ability to prove properties about applications.
 
 Each approach has different strengths and weaknesses that will be discussed in detail individually based on the examples proposed in each paper. We will be interested primarily in the applicability of this method, the required skill to use it, the covered inputs and the level of automation achieved. This provides a overview of capabilities and limitations for each.
 
-First we will present some general concepts in §\ref{concepts} that are used in the proceeding sections. We will continue by presenting 4 papers \cite{base3, base4, base5, base7} by describing each individually in §\ref{approaches} and then doing a comparison in §\ref{comparison}. Finally we will present our conclusions §\ref{conclusion}.
+First we will present some general concepts in §\ref{concepts} that are used in the following sections. We will continue by presenting 4 papers \cite{base3, base4, base5, base7} by describing each individually in §\ref{approaches} and then doing a comparison in §\ref{comparison}. Finally we will present our conclusions §\ref{conclusion}.
 
 \section{Concepts}
 \label{concepts}
 
 \subsection{Symbolic execution}
 
-Symbolic Execution involves replacing the input of a application with symbolic values in order to be able to test all feasible paths that an execution could take. Since concrete values are not used, instructions can no longer execute normally, but instead return symbolic expressions. Branches handled by following both paths, but using a different \emph{path condition}. This method allows an automated tool or a human to check properties of the program being executed. The most important aspects that are checked in the following paper are assertions during the execution and the final result.
+Symbolic Execution involves replacing the input of a application with symbolic values in order to be able to test all feasible paths that an execution could take. Since concrete values are not used, instructions can no longer execute normally, but instead return symbolic expressions based on the input. Branches are handled by following both paths, but using a different \emph{path condition} for each. This method allows an automated tool or a human to check properties of the program being executed. The most important aspects that are checked in the presented papers are assertions during the execution and the final result.
 
 Unfortunately symbolic execution has some limitations that make its application difficult. Firstly it is impossible to use it on programs that have unbounded loops as the path condition would grow indefinitely. This limitation can be worked around in specific situations as can be seen in \cite{base5}, but generally it is required that loops are bounded artificially. Secondly most implementations are unable to handle floating point symbolic values as operations on them do not have a precise result. Dealing with this issue is difficult as can be seen in \cite{base1}.
 
 \subsection{Scheduling}
 
-This paper considers symbolic execution in the context of non-sequential applications and as such the scheduling of the threads of a application is a very important topic. In order to check such a program all possible thread interleavings must be analyzed, but this is very computationally expensive. 
+This paper considers symbolic execution in the context of non-sequential applications and as such the scheduling of the threads of an application is a very important topic. In order to check such a program all possible thread interleavings must be analyzed, but this is very computationally expensive. 
 
 Fortunately there are many methods to deal with this such as DVC \cite{dvc} and iterative context bounding scheduling \cite{musuvathi2007iterative}.
 
@@ -66,7 +66,7 @@ The DVC of a event $V_e$ is $V_t$ right after e has been executed. After this ha
 	\item $e \lessdot e'$ if $V_e \leq V_{e'}$ and $V_{prev(e')} \neq V_e$, prev(e) is the event that precedes e
 \end{itemize}
 
-These properties help to check which events always happen in a specific order or if they could be reversed with another scheduling.
+These properties help to check which events always happen in a specific order or if they could be reversed with another scheduling and if such a reversal would have an effect on the result of the execution.
 
 \subsubsection{Iterative context bounding}
 
@@ -185,16 +185,16 @@ The biggest advantage of this method is the ability to test functions with unbou
 
 This paper presents \emph{GKLEE}, a extention of \emph{KLEE} \cite{klee} that has been designed to analyse CUDA programs. GPU programs are massively concurrent and this implementation is able to deal with this by using the semantics of the device to drastically reduce the amount of interleaving that must be tested.
 
-We will shortly present some concepts of CUDA that are required for the rest of this section:
+We will shortly present some concepts of CUDA that are required to understand the rest of this section:
 
 \begin{description}
 	\item[Memory layout] There is one block of global memory, one block of memory for each block of threads and one block of memory for each thread.
-	\item[Warp] A group of 32 threads is called a warp. All warps execute the same instruction at the same time, so it is possible that both options in a branch are processed for each thread.
+	\item[Warp] A group of 32 threads is called a warp. All warps execute the same instruction at the same time, essentially progressing in a lockstep. 
 	\item[Block] A group of threads, organized in warps that have some shared memory separate from the global memory. Threads can synchronize using barriers. All blocks have the same size.
 	\item[Barrier] The only synchronization primitive provided by the hardware.
 \end{description}
 
-The only reason \emph{GKLEE} can analyse an application in a reasonable amount of time is the utilization of canonical scheduling. This is achieved by executing a thread until it reaches a barrier call and only then moving on to another one since preemption is not possible on the hardware. During this execution all reads and writes are recorded and they are checked for conflicts with other threads using a SMT solver. Since warps execute simultaneously no unexpected races can occur between threads on the same hardware. \emph{GKLEE} is aware of the differences between CUDA versions and of the undefined behavior of the environment and can also detect races in the same warp.
+The only reason \emph{GKLEE} can analyse an application in a reasonable amount of time is the utilization of canonical scheduling. This is achieved by executing a thread until it reaches a barrier call and only then moving on to another one since preemption is not possible on the hardware. During this execution all reads and writes are recorded and they are checked for conflicts with other threads using a SMT solver. Since warps execute simultaneously no unexpected races can occur between threads on the same hardware. \emph{GKLEE} is aware of the differences between CUDA versions and of the undefined behavior of the environment and can also detect races in the same warp that would never happen on the tested machine.
 
 This implementation is able to find a surprising amount of problems in applications:
 
@@ -214,7 +214,7 @@ This implementation is able to find a surprising amount of problems in applicati
 	\item[Non-coalesced Device Memory Accesses]
 		Specific access pasterns of data in the device memory will reduce performance. These patterns differ between CUDA versions.
 	\item[Missing volatile modifier]
-		Subtle bug that only occurs when optimizations are turned on. Only CUDA 5.x does this optimization.
+		Subtle bug that only occurs when optimizations are turned on. Only CUDA 5.x applies this optimization.
 \end{description}
 
 These problems are very hard to detect using traditional methods such as testing and debugging as they are only triggered on a specific scheduling and hardware. The presented performance bottlenecks are also very useful, especially since they are individualized for hardware and CUDA version.  Some examples of tested kernels are provided in Fig. \ref{example:7}.
@@ -251,7 +251,7 @@ As we have presented there are multiple methods that apply symbolic execution to
 
 Fig. \ref{comp table} gives a tabular overview of the presented methods and their capabilities and limitations. As can be seen the choice for the implementation is as diverse as the platforms covered.
 
-In this authors opinion all techniques described in the presented papers offer some improvement to the field of concolic testing, but \emph{Concolic Testing of Multithreaded Programs and Its Application to Testing Security Protocols} is the most useful approach. It is the only one able to analyse large practical applications and could be extended to apply the improvements from \cite{base4} and \cite{base5}. Its low requirements from the perspective of the tester makes it very attractive to existing software that intends to extend its testing suite which would considerably improve its quality.
+In this authors opinion all techniques described in the presented papers offer some improvement to the field of concolic testing, but \emph{Parallel Symbolic Execution for Automated Real-World Software Testing \cite{base3}} is the most useful approach. It is the only one able to analyse large practical applications and could be extended to apply the improvements from \cite{base4} and \cite{base5}. Its low requirements from the perspective of the tester makes it very attractive to existing software that intends to extend its testing suite which would considerably improve its quality.
 
 \begin{figure}
 	\begin{tabular}{l l l l l l}
