@@ -1,0 +1,112 @@
+\documentclass[10pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{listings}
+
+
+
+\title{Execrcise sheet 1}
+\author{Savu Victor-Gabriel}
+
+\begin{document}
+	\maketitle
+	
+	\section{Exercise 1}
+	
+	\begin{lstlisting}[mathescape]
+		loadc 3
+		loada $\rho(y)$
+		dup
+		mul
+		loadc 2
+		loada  $\rho(x)$
+		mul
+		add
+		loadc 1
+		add
+		loada $\rho(y)$
+		loadc 42
+		sub
+		div
+	\end{lstlisting}
+	
+	\section{Exercise 2}
+	
+	\begin{lstlisting}[mathescape]
+		loadc n
+		
+		loadc 1
+		loadc 2
+		
+		loadc 0
+		load
+		
+		start:
+		loadc 1
+		sub
+		dup
+		jumpz done
+		
+		loadc 1
+		load
+		
+		loadc 2
+		load
+		
+		loadc 1
+		store 
+		
+		add
+		loadc 2
+		store
+		pop
+		
+		jump start
+		
+		done:
+		
+		pop
+		loadc 0
+		store
+		pop
+		pop
+		
+		halt
+	\end{lstlisting}
+	
+	\section{Exercise 3}
+	
+	\begin{tabular}{l l}
+		$code_R(e',e) \rho = $ & $code_R(e') \rho$\\
+		& \texttt{pop} \\
+		& $code_R(e) \rho$
+	\end{tabular}
+	
+	\section{Exercise 4}
+	
+	\begin{tabular}{l l}
+		$code_R(e' || e) \rho = $ & $code_R(e') \rho$\\
+		& \texttt{jumpz evalpt2} \\
+		& \texttt{loadc 1} \\
+		& \texttt{jump done} \\
+		& \texttt{evalpt2:} \\
+		& $code_R(e) \rho$ \\
+		& \texttt{done:} \\
+	\end{tabular}
+	
+	\section{Exercise 5}
+	
+	\begin{tabular}{l l}
+		$code_R(b ? e' : e) \rho = $ & $code_R(b) \rho$ \\
+		& \texttt{jumpz evalpt2} \\
+		& $code_R(e) \rho$ \\
+		& \texttt{jump done} \\
+		& \texttt{evalpt2:} \\
+		& $code_R(e') \rho$ \\
+		& \texttt{done:} \\
+	\end{tabular}
+\end{document}

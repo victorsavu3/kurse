@@ -1,0 +1,109 @@
+\documentclass[10pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{listings}
+
+\title{Execrcise sheet 3}
+\author{Savu Victor-Gabriel}
+
+\begin{document}
+	\maketitle
+	
+	\section{Exercise 1}
+	
+	$\rho = \left\lbrace a \rightarrow 5, buffer \rightarrow 0, x \rightarrow 64, y \rightarrow 66, val \rightarrow 0, next \rightarrow 1 \right\rbrace $
+	
+	\begin{itemize}
+		\item a.x.val + a.y
+		
+		\begin{tabular}{l l}
+			$code_R(a.x.val + a.y) \rho = $ & \texttt{loada} $\rho(a) + \rho(x) + \rho(val)$ $(69)$ \\
+			& \texttt{loada} $\rho(a) + \rho(y)$ $(71)$ \\
+			& \texttt{add}
+		\end{tabular}
+		
+		\item a.buffer[a.x.next-$>$val]
+		
+		\begin{tabular}{l l}
+			$code_R(a.buffer[a.x.next->val) \rho = $ & \texttt{loadc} $\rho(a) + \rho(buffer)$ $(5)$ \\
+			& \texttt{loada} $\rho(a) + \rho(x) + \rho(val)$ $(69)$ \\
+			& \texttt{load} \\
+			& \texttt{add} \\
+			& \texttt{load}
+		\end{tabular}
+	\end{itemize}
+	
+	
+	
+	\section{Exercise 2}
+	
+	\begin{enumerate}
+		\item \texttt{5 + (x*42);}
+		
+		q = 3
+		
+		\item \texttt{a[y*y + 5];}
+		
+		q = 3
+		
+		\item \texttt{x = y + 42;}
+		
+		q = 2
+		
+		\item \texttt{while (x < 42) { x = x + 1; a[x+2] = 42; }}
+		
+		\begin{itemize}
+			\item \texttt{x = x + 1;} $\Rightarrow$ 2
+			\item \texttt{a[x+2] = 42;} $\Rightarrow$ 4
+			\item \texttt{x < 42} $\Rightarrow$ 2
+		\end{itemize}
+		
+		q = 4
+	\end{enumerate}
+	
+	\section{Excersise 3}
+	
+	\subsection{$f$}
+	
+	\begin{lstlisting}
+	int f ( int x , int y ) {
+		return x * y +2;
+	}
+	\end{lstlisting}
+	
+	q = 2
+	
+	\begin{lstlisting}[mathescape]
+	
+	enter 2
+	alloc 0
+	
+	loadr -3
+	loadr -4
+	mul
+	loadc 2
+	add
+	
+	storer -3
+	
+	return
+	
+	\end{lstlisting}
+	
+	\subsection{$e \equiv$ \texttt{f(8,5)}}
+	
+	\begin{lstlisting}[mathescape]
+	
+	loadc 5
+	loadc 8
+	mark
+	loadc $\rho(g)$
+	call
+	slide 1
+	
+	\end{lstlisting}
+\end{document}

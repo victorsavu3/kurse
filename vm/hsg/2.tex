@@ -1,0 +1,94 @@
+\documentclass[10pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{listings}
+
+\title{Execrcise sheet 2}
+\author{Savu Victor-Gabriel}
+
+\begin{document}
+	\maketitle
+	
+	\section{Exercise 1}
+	
+	\subsection{for}
+	
+	\begin{tabular}{l l}
+		$code_R(for(e_1;e_2;e_3) s') \rho = $ & $code_R(e_1) \rho$ \\
+		& \texttt{pop} \\
+		& \texttt{start:} \\
+		& $code_R(e_2) \rho$ \\
+		& \texttt{jumpz done} \\
+		& $code_R(s') \rho$ \\
+		& \texttt{cond:} \\
+		& $code_R(e_3) \rho$ \\
+		& \texttt{pop} \\
+		& \texttt{jump start} \\
+		& \texttt{done} \\
+	\end{tabular}
+	
+	\subsection{while}
+	
+	\begin{tabular}{l l}
+		$code_R(wile(e) s') \rho = $ & \texttt{cond:} \\
+		& $code_R(e) \rho$ \\
+		& \texttt{jumpz done} \\
+		& $code_R(s') \rho$ \\
+		& \texttt{jump cond} \\
+		& \texttt{done} \\
+	\end{tabular}
+	
+	\subsection{continue}
+	
+	\begin{tabular}{l l}
+		$code_R(continue) \rho = $ & \texttt{jump cond}
+	\end{tabular}
+	
+	\subsection{break}
+	
+	\begin{tabular}{l l}
+		$code_R(break) \rho = $ & \texttt{jump done}
+	\end{tabular}
+	
+	\section{Exercise 2}
+	
+	\begin{lstlisting}[mathescape]
+		while(x <= 10) {
+			x = x+1;
+			if(x % 2 == 0)
+				*y = y + 1;
+		}
+	\end{lstlisting}
+	
+	\section{Exercise 3}
+	
+	\begin{tabular}{l l}
+		$code_R(do s while(e)) \rho = $ & \texttt{start:} \\
+		& $code_R(e) \rho$ \\
+		& $code_R(s) \rho$ \\
+		& \texttt{cond:} \\
+		& \texttt{not} \\
+		& \texttt{jumpz start}
+	\end{tabular}
+	
+	\section{Excersise 4}
+	
+	
+	\begin{lstlisting}[mathescape]
+	loada $\rho(y)$
+	loadc 4
+	add
+	loadc $\rho(y)$
+	store
+	
+	loada $\rho(z)$
+	mul
+	
+	loadc $\rho(x)$
+	store
+	\end{lstlisting}
+\end{document}

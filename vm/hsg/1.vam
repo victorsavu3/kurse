@@ -1,0 +1,39 @@
+loadc 2
+
+loadc 1
+loadc 2
+
+loadc 0
+load
+
+start:
+loadc 1
+sub
+dup
+jumpz done
+
+loadc 1
+load
+
+loadc 2
+load
+
+loadc 1
+store 
+
+add
+loadc 2
+store
+pop
+
+jump start
+
+done:
+
+pop
+loadc 0
+store
+pop
+pop
+
+halt
