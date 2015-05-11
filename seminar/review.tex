@@ -1,0 +1,69 @@
+\documentclass{article}
+
+\usepackage{cite}
+\usepackage{hyperref}
+
+\title{Directed Symbolic Execution - review}
+\author{Savu Victor-Gabriel}
+
+\begin{document}
+\maketitle
+
+\section{Summary}
+
+Ilya Migals paper, "Directed Symbolic Execution" \cite{revpaper} is a summary another paper with the same name \cite{ma2011directed} and attempts to reproduce the results. It presents SDSE (Short-distance symbolic execution), CCBSE(Call-chain-backwars symbolic execution) and Mix-CCBSE, then compares them to other implementations both as algorithms and as performance.
+
+\subsection{Directed Symbolic Execution Tool and Strategies}
+
+This section presents Otter, the tool used to implement two new search strategies. It creates a control flow graph using CIL and then starts to evaluate symbolic execution states. Two functions are of particular interest \texttt{pick} and \texttt{manage\_targets} as they contain the entire implementation for all strategies.
+
+SDSE is implemented simply in the \texttt{pick} function and always attempts to choose the next state to be evaluated as the one with the shortest path along the CFG to the target. It can be more efficient in some situations where one needs to know if an assert is reached.
+
+CCBSE attempts to reach a target by going backwards along the function call chain in order to find a possible path. It could be very efficient, but it can fail in its task and as such it is mixed with a forward search strategy in Mix-CCBSE.
+
+Otter is also used to implement the search strategies of KLEE and SAGE in order to compare them from a performance perspective. Unfortunately this is not always accurate as the differences in implementations can cause a significant deviation when compared to the original tool.
+
+\subsection{Experimental Results}
+
+In this section the author attempted to reproduce the results obtained in \cite{ma2011directed}, but is unable to do so due to compilation errors in \emph{coreutils} and \emph{newlib}. Other parts of \emph{coreutils} are evaluated and Otter-KLEE and Mix-CCBSE obtain the best and most stable results. The other methods have a large distribution of run time during testing.
+
+\section{Strengths}
+
+The paper has a very clear structure and explains everything in a logical order. The attempt to reproduce the original results is also very beneficial as it shows that it can not be easily done due to the complexity of the system.
+
+All the search strategies used in multiple implementations are sufficiently explained and compared. Limitations of the testing are also very well specified.
+
+\section{Weaknesses}
+
+\subsection{Generic}
+
+The figures could be redone in the document and not imported as pictures in order to improve their appearance. The experimental results section could be expanded to contain some examples.
+
+\subsection{Specific}
+
+\begin{enumerate}
+	\item[1.] Should the title contain a dot?
+	\item[1.] coreutils are not part of the linux kernel, they are actually independent of the kernel used.
+	\item[1.] Remove copyright on to bottom left
+	\item[2.] Otter repeated too much in the same section
+	\item[2.] \emph{manage\_targets} could have a reference to the figure
+	\item[4.] Paragraph 1 - oversight $\rightarrow$ attention
+	\item[6.] Improve the resolution of Fig. 4
+	\item[7.] Rephrase 1) to make it more easily understandable
+	\item[9.] Is reference [7] used?
+	\item[9.] KLEE reference is not accurate, actual website is \url{https://klee.github.io/}, could also use \cite{klee}
+\end{enumerate}
+
+\subsection{Missing}
+
+\begin{enumerate}
+	\item[2.] Define CIL, STP, SMT
+	\item[8.] Add the actual error encountered
+	\item[8.] Add a list of the tested coreutils binaries
+	\item[8.] Add the experimental results
+\end{enumerate}
+
+\bibliography{ref}
+\bibliographystyle{splncs03}
+
+\end{document}          

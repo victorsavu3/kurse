@@ -153,18 +153,19 @@ This approach has been successfully been used to find numerous bugs in the Java 
 \begin{figure}
 	\centering
 	
-	\begin{tabular}{l l l l}
-		Vector & Run Tile & Branch coverage & Bugs \\
-		 & & & race/deadlock/infinite loop/exceptions \\
+	\begin{tabular}{c | c | c | c | c | c | c}
+		Vector & Run Time (s) & Branch coverage & \multicolumn{4}{c}{Bugs} \\
+		\cline{4-7}
+		& & & race & deadlock & infinite loop & exceptions \\
 		 
 		\hline
 		
-		Vector & 5519 & 76.38 & 1/9/0/2 \\
-		ArrayList & 6811 & 75 & 3/9/0/3 \\
-		LinkedList & 4401 & 82.05 & 3/3/1/1 \\
-		LinkedHashSet & 7303 & 67.39 & 3/9/0/2 \\
-		TreeSet & 7333 & 54.93 & 4/9/0/2 \\
-		HashSet & 7449 & 69.56 & 19/9/0/2 \\
+		Vector & 5519 & 76.38 & 1&9&0&2 \\
+		ArrayList & 6811 & 75 & 3&9&0&3 \\
+		LinkedList & 4401 & 82.05 & 3&3&1&1 \\
+		LinkedHashSet & 7303 & 67.39 & 3&9&0&2 \\
+		TreeSet & 7333 & 54.93 & 4&9&0&2 \\
+		HashSet & 7449 & 69.56 & 19&9&0&2 \\
 	\end{tabular}
 	
 	\caption{Example of tested software, taken from \cite{base4}}
@@ -222,8 +223,8 @@ These problems are very hard to detect using traditional methods such as testing
 \begin{figure}
 	\centering
 	
-	\begin{tabular}{l l l l l l l}
-		Kernel & Race & Correct & \#Threads & \multicolumn{2}{c}{Bank Conflict} & Warp divergence\\
+	\begin{tabular}{c | c | c | c | c | c | c}
+		Kernel & Race & Correct & \#Threads & \multicolumn{2}{c |}{Bank Conflict} & Warp divergence\\
 		& & & & 1.x & 2.x & \\
 		\hline
 		
