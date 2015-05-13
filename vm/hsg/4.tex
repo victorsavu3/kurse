@@ -1,0 +1,141 @@
+\documentclass[10pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{listings}
+
+\title{Execrcise sheet 4}
+\author{Savu Victor-Gabriel}
+
+\begin{document}
+	\maketitle
+	
+	\section{Exercise 1}
+	
+	\begin{lstlisting}[mathescape]
+foobar:
+	enter 2
+	alloc 1
+	
+	loardr -3
+	loada $\rho(g)$
+	add
+	storer 0
+	
+	loadr 0
+	storer -3
+	
+	return
+
+main:
+	enter 2
+	alloc 1
+	
+	loadc 1
+	storer 0
+	
+	loadr 0
+	storea $\rho(g)$
+	
+	loada $\rho(g)$
+	mark
+	loadc $\rho(foobar)$
+	call
+	slide 0
+	storer $\rho(g)$
+	
+	loadr 0
+	storer -3
+	\end{lstlisting}
+	
+	\section{Exersise 2}
+	
+	\subsection{}
+	Independent of the path taken the state of stack and PC are identical in the optimized code and the unoptimized one. There might be a reduction in the amount of stack spaced used during the execution of the optimized code.
+	
+	\subsection{}
+	
+	\subsubsection{Simle Arithmetics}
+	\begin{enumerate}
+		\item Add 0 - remove code
+		\begin{lstlisting}
+loadc 0
+add
+		\end{lstlisting}
+		
+		\item Sub 0 - remove code
+		\begin{lstlisting}
+loadc 0
+sub
+		\end{lstlisting}
+		
+		\item div 1 - remove code
+		\begin{lstlisting}
+loadc 1
+div
+		\end{lstlisting}
+	\end{enumerate}
+
+	\subsubsection{Simplifications}
+	\begin{enumerate}
+	\item $a + (-b) \Rightarrow a - b$
+		\begin{lstlisting}
+neg
+add
+		\end{lstlisting}
+		$\Rightarrow$
+		\begin{lstlisting}
+sub
+		\end{lstlisting}
+	\end{enumerate}	
+
+	\subsubsection{Pointers}
+	\begin{enumerate}
+	\item const load
+		\begin{lstlisting}
+loadc a
+load
+		\end{lstlisting}
+		$\Rightarrow$
+		\begin{lstlisting}
+loada a
+		\end{lstlisting}
+		
+	\item const store
+		\begin{lstlisting}
+loadc a
+store
+pop
+		\end{lstlisting}
+		$\Rightarrow$
+		\begin{lstlisting}
+storea a
+		\end{lstlisting}
+	\end{enumerate}
+	
+	\section{Exercise 3}
+	
+	\begin{lstlisting}[mathescape]
+let rec A = fun m n $\rightarrow$ 
+	if m = 0 then 
+		n+1 
+	else if m > 0 && n = 0 then 
+		(A (m-1) 1) 
+	else
+		(A (m-1) (A m (n-1)))
+in ...
+	\end{lstlisting}
+	
+	
+	\section{Exercise 4}
+	
+	\begin{itemize}
+		\item y
+		\item z
+		\item z, y
+		\item z, x, f, y
+	\end{itemize}
+\end{document}
