@@ -1,0 +1,153 @@
+\documentclass[10pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{listings}
+
+\title{Execrcise sheet 6}
+\author{Savu Victor-Gabriel}
+
+\begin{document}
+	\maketitle
+	
+	\section{Exercise 1}
+	\subsection{Call by value}
+	
+	
+	\subsection{sd}
+	
+	\begin{lstlisting}
+
+	0 alloc 1
+	0 pushloc 0
+	1 mkvec 1
+	1 mkfunval _0
+	1 jump _1
+	_0
+	0 targ 2
+	0 pushloc 0
+	1 getbasic
+	1 pushloc 2
+	2 getbasic
+	2 gr
+	1 jumpz _2
+	0 mark _4
+	2 pushloc 3
+	3 getbasic
+	3 pushloc 5
+	4 getbasic
+	4 sub
+	3 mkbasic
+	3 pushloc 5
+	4 pushglob 0
+	5 apply
+	_4
+	0 jump _3
+	_2
+	0 pushloc 0
+	1 getbasic
+	1 pushloc 2
+	2 getbasic
+	2 le
+	1 jumpz _5
+	0 mark _7
+	2 pushloc 4
+	3 getbasic
+	3 pushloc 4
+	4 getbasic
+	4 sub
+	3 mkbasic
+	3 pushloc 4
+	4 pushblob 0
+	5 apply
+	_7
+	1 jump _6
+	_5
+	0 pushloc 0
+	_6
+	_3
+	1 return 2
+	_1
+	1 rewrite 1
+	1 mark _8
+	3 loadc 6
+	4 mkbasic
+	4 loadc 4
+	5 mkbasic
+	5 pushloc 5
+	6 apply
+	_8
+	4 slide 1
+	3 halt
+
+	\end{lstlisting}
+	
+	\subsection{Decompile}
+	
+	\begin{lstlisting}
+let f = fun a b ->
+	if a > b then
+		let y = a-b in
+			f b y
+	else if a < b then
+		let y = b-a in
+			f a y
+	else
+		a
+in f(6, 4)
+	\end{lstlisting}
+	
+	Computes the lowest common divisor of 4 and 6.
+	
+	\section{Exersise 2}
+	
+	\subsection{$evalVars(e)$}
+	
+	\[
+	evalVars(e) =
+	\begin{cases}
+		\left\lbrace x \right\rbrace & \text{if } x \in \rho \\
+		evalVars(e_1) \cup evalVars(e_2) & \text{if } e = e_1 \Box e_2 \\
+		evalVars(e_1) & \text{if } e = \Box e_1 \\
+		evalVars(f) \cup (\cup\left\lbrace evalVars(e_i) \mid 1<i<n \right\rbrace) & \text{if } e = (f e_1 e_2 ... e_n) \\
+		evalVars(e_1) \cup (evalVars(e_2) \cap evalVars(e_3)) & \text{if } e = \text{if } e_1 \text{ then } e_2 \text{ else } e_3 \\
+		evalVars(e_0) & \text{if } e = \text{ let [rec] } x_1 = e_1 \text{ in } e_0 \\
+		\emptyset & otherwise
+	\end{cases}
+	\]
+	
+	\subsection{Code generation}
+	
+	\begin{tabular}{l l}
+		$code_V \, x \, \rho \; sd \; A = $ &\\
+			& $getvar \, x \, \rho $\\
+			& if $x\notin A$ \\
+			& \hspace{3ex} eval \\
+
+		$code_V \, (e_1 \Box e_2) \, \rho \; sd \; A = $ & \\
+			& $code_B \, e_1 \, \rho \; sd \; A $ \\
+			& $code_B \, e_2 \, \rho \; sd + 1 \; A \cup evalVars(e_1) $ \\
+			& $op_2$ \\
+			& mkbasic \\
+			
+		$code_V \, (\Box e_1) \, \rho \; sd \; A = $ & \\
+			& $code_B \, e_1 \, \rho \; sd \; A $ \\
+			& $op_1$ \\
+			& mkbasic \\
+		
+		$code_V \, (\text{if } e_1 \text{ then } e_2 \text{ else } e_3) \, \rho \; sd \; A = $ & \\
+			& $code_B \, e_1 \, \rho \; sd \; A $ \\
+			& jumpz A \\
+			& $code_V \, e_2 \, \rho \; sd \; A \cup evalVars(e_1) $ \\
+			& jump B \\
+			& A: $code_V \, e_3 \, \rho \; sd \; A \cup evalVars(e_1) $ \\
+			& B: \\
+		
+		$code_B \, e \, \rho \; sd \; A = $ & \\
+			& $code_V \, e \, \rho \; sd \; A$ \\
+			& getbasic
+	\end{tabular}
+\end{document}

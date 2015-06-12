@@ -1,0 +1,86 @@
+\documentclass[10pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{listings}
+
+\title{Execrcise sheet 7}
+\author{Savu Victor-Gabriel}
+
+\begin{document}
+	\maketitle
+	
+	\section{Exercise 1}
+	
+	\[
+	cpa(e) \; \gamma =
+	\begin{cases}
+		e & 
+		e \equiv b \\
+		
+		\gamma(x) & 
+		e \equiv x \\
+		
+		\Box_1 cpa(e_1) \; \gamma & 
+		e \equiv (\Box_1 e_1) \\
+		
+		cpa(e_1) \; \gamma \, \Box_2 \, cpa(e_2) \; \gamma & 
+		e \equiv (e_1 \Box_2 e_2) \\
+		
+		cpa(e_1) \; \gamma & 
+		e \equiv (\text{if } e_0 \text{ then } e_1 \text{ else } e_2) \wedge \\ 
+		& cpa(e_0) \; \gamma = \text{true} \\
+		
+		cpa(e_2) \; \gamma & 
+		e \equiv (\text{if } e_0 \text{ then } e_1 \text{ else } e_2) \wedge \\ 
+		& cpa(e_0) \; \gamma = \text{false} \\
+		
+		e & 
+		e \equiv (\text{if } e_0 \text{ then } e_1 \text{ else } e_2) \wedge \\
+		& cpa(e_0) \; \gamma \neq \text{false} \wedge cpa(e_0) \; \gamma \neq \text{true} \\
+		
+		cpa(e_0) (\gamma \cup \left\lbrace x_1 \mapsto cpa(e_1) \right\rbrace ) &
+		e \equiv (\text{let } x_1 = e_1 \text{ in } e_0) \\
+		
+		\dots
+	\end{cases}
+	\]
+	
+	\section{Exercise 2}
+	
+	\subsection{Heap}
+	
+	We store the record as a vector of references in order to be able to store arbitrary datatypes.
+	
+	\subsection{Instruction}
+	
+	\begin{tabular}{l l}
+		$code_V \, \left\lbrace f_1 = e_1 \dots f_n = e_n \right\rbrace  \, \rho \; sd = $ &\\
+		& $code_V \, e_1 \, \rho \; sd$\\
+		& $\dots$\\
+		& $code_V \, e_n \, \rho \; sd + n - 1$\\
+		& mkvec $n$ \\
+	\end{tabular}
+	
+	\subsection{Instruction}
+	
+	\begin{tabular}{l l}
+		$code_V \, e.field_i \, \rho \; sd = $ &\\
+		& $code_V \, e \, \rho \; sd$\\
+		& get i \\
+	\end{tabular}
+	
+	\subsection{Translation}
+	
+	\begin{tabular}{l l}
+		$code_V \, e_1.field_i \leftarrow e_2 \, \rho \; sd = $ &\\
+		& $code_V \, e_1 \, \rho \; sd$\\
+		& get i \\
+		& $code_V \, e_2 \, \rho \; sd + 1$ \\
+		& dup \\
+		& rewrite 2 \\
+	\end{tabular}
+\end{document}
