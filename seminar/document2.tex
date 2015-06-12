@@ -44,19 +44,19 @@ Fortunately there are many methods to deal with this such as DVC \cite{dvc} and 
 
 \subsubsection{Dynamic vector clocks (DVC)} are a method to eliminate the need to analyse all possible thread interleavings, but still do a complete analysis.
 
-We represent the execution of a program $P$ as a sequence of events $(t, l, m, a)$ where $t$ is a thread, $l$ is the label of an instruction, $m$ is a shared memory location and $a$ is the type of access [$r$ (read), $w$ (write), $l$ (lock), $u$ (unlock)]. If a instruction does not use memory $m$ and $a$ are $\bot$.
+We represent the execution of a program $P$ as a sequence of events $(t, l, m, a)$ where $t$ is a thread, $l$ is the label of an instruction, $m$ is a shared memory location and $a$ is the type of access [$r$ (read), $w$ (write), $l$ (lock), $u$ (unlock)]. If a instruction does not involve memory $m$ and $a$ are $\bot$.
 
-In all paths $\pi \in $\textbf{Ex}$(P)$ two events can be \emph{sequentially related} $e \triangleleft e'$ if intuitively $e'$ always happens after $e$. $e \parallel e'$ iff $e \ntriangleleft e'$ and $e' \ntriangleleft e$. Events can also be \emph{race related} $e \lessdot e'$ if $e \parallel e'$, they access the same memory and intuitively could happen in parallel, but $e$ is first in this execution. Using these two partial orderings we can define the \emph{causal relation} $\preceq$ as $\triangleleft \cup \lessdot$.
+In all paths $\pi \in $\textbf{Ex}$(P)$ two events can be \emph{sequentially related} $e \triangleleft e'$ if intuitively $e'$ always happens after $e$ in the same thread. $e \parallel e'$ iff $e \ntriangleleft e'$ and $e' \ntriangleleft e$. Events can also be \emph{race related} $e \lessdot e'$ if $e \parallel e'$, they access the same memory and intuitively could happen in parallel, but $e$ is first in this execution. Using these two partial orderings we can define the \emph{causal relation} $\preceq$ as $\triangleleft \cup \lessdot$.
 
-Using the \emph{causal relation} we create equivalence classes for the set of executions and define the \emph{representative set of executions} \textbf{REx} as the set that contains only one instance of each class. For all statements reachable in P there exists $\pi \in$ \textbf{REx} such that the statement is executed in $\pi$ \cite[§4]{base4}.
+Using the \emph{causal relation} we create equivalence classes for the set of executions \textbf{Ex} and define the \emph{representative set of executions} \textbf{REx} as the set that contains only one instance of each class. For all statements reachable in P there exists $\pi \in$ \textbf{REx} such that the statement is executed in $\pi$ \cite[§4]{base4}.
 
-Dynamic vector clocks are used to determine which statements are in a causal relationship. They are created by executed the following for each event $(t, l, m, a)$ and initializing all clocks to $0$.
+Dynamic vector clocks are used to determine which statements are in a causal relationship. They are created by executing the following for each event $(t, l, m, a)$ and initializing all clocks to $0$.
 
 \begin{itemize}
 	\item if $a = r$ or $w$ or $l$ or $u$ then $V_t \leftarrow V_t + 1$
 	\item if $a = r$ then $V_t \leftarrow max \left\lbrace V_t, V_m^w \right\rbrace$ and $V_m^a \leftarrow max \left\lbrace V_m^a, V_t \right\rbrace$
-	\item  if $a = w$ or $l$ or $u$ then $V_m^w \leftarrow V_m^a \leftarrow V_t \leftarrow \left\lbrace V_m^a, V_t \right\rbrace$
-	\item if $e$ is of the form $fork(l)$ then $V_{t'} \leftarrow V_t$ and $V_t \leftarrow V_t + 1$ and $V_{t'} \leftarrow V_{t'} + 1$
+	\item  if $a = w$ or $l$ or $u$ then $V_m^w \leftarrow V_m^a \leftarrow V_t \leftarrow max \left\lbrace V_m^a, V_t \right\rbrace$
+	\item if $e$ is of the form $fork(t)$ then $V_{t'} \leftarrow V_t$ and $V_t \leftarrow V_t + 1$ and $V_{t'} \leftarrow V_{t'} + 1$
 \end{itemize}
 
 The DVC of a event $V_e$ is $V_t$ right after e has been executed. After this has been computed the following hold \cite[§4]{base4}:
@@ -66,7 +66,7 @@ The DVC of a event $V_e$ is $V_t$ right after e has been executed. After this ha
 	\item $e \lessdot e'$ if $V_e \leq V_{e'}$ and $V_{prev(e')} \neq V_e$, prev(e) is the event that precedes e
 \end{itemize}
 
-These properties help to check which events always happen in a specific order or if they could be reversed with another scheduling and if such a reversal would have an effect on the result of the execution.
+These properties help to check which events always happen in a specific order or if they could be reversed in another scheduling and if such a reversal would have an effect on the result of the execution.
 
 \subsubsection{Iterative context bounding}
 
