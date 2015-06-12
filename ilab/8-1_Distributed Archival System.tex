@@ -1,0 +1,54 @@
+\documentclass{beamer}
+
+\usepackage{default}
+\usepackage{hyperref}
+
+\title{Distributed archival system}
+\author{Savu Victor-Gabriel}
+\institute{TUM}
+
+\begin{document}
+	\frame{\titlepage}
+	
+	\begin{frame}
+		\frametitle{Requirements}
+		
+		\begin{itemize}
+			\item handle large number of big files
+			\item redundant storage
+			\item easy recovery
+			\item simple backups
+				\begin{itemize}
+					\item online
+					\item offline
+				\end{itemize}
+		\end{itemize}
+	\end{frame}
+	
+	\begin{frame}
+		\frametitle{git-annex}
+		
+		\url{https://git-annex.branchable.com/}
+		
+		\begin{itemize}
+			\item based on git
+			\item fast
+			\item distributes location of files in git
+			\item allows files to be stored in arbitrary locations
+			\item optional encryption
+			\item includes a simple ui
+			\item allows sharing
+		\end{itemize}
+	\end{frame}
+	
+	\begin{frame}
+		\frametitle{Practical exersise}
+		
+		\begin{itemize}
+			\item create a complete archival system using 4 PCs
+			\item test offline backups
+			\item implement file distribution rules
+			\item sync a folder with a second system
+		\end{itemize}
+	\end{frame}
+\end{document}
