@@ -1,0 +1,143 @@
+\documentclass[10pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{listings}
+
+\title{Execrcise sheet 8}
+\author{Savu Victor-Gabriel}
+
+\begin{document}
+	\maketitle
+	
+	\section{Exercise 1}
+	
+	\begin{tabular}{l l}
+		$code_V \, \text{let } (y_1, ..., y_n) = e_1 in e_0 \, \rho \; sd = $ &\\
+		& $code_V \, e_1 \, \rho \; sd$ \\
+		& for it = 1..m do \\
+		& \hspace{5mm} get0 $j_{it}$ \\
+		& pop \\
+		& $code_V \, e_0 \, \rho \; sd + m$ \\
+	\end{tabular}
+	
+	\subsection*{Optimization}
+	
+	We can make things simpler:
+	
+	get0 has 2 parameters j and sd
+	
+	the vector stays at the bottom of the stack
+	
+	\begin{tabular}{l l}
+		$code_V \, \text{let } (y_1, ..., y_n) = e_1 in e_0 \, \rho \; sd = $ &\\
+		& $code_V \, e_1 \, \rho \; sd$ \\
+		& for it = 1..m do \\
+		& \hspace{5mm} get0 $j_{it}$ $sd + j$ \\
+		& $code_V \, e_0 \, \rho \; sd + m + 1$ \\
+		& slide 1 \\
+	\end{tabular}
+	
+	\section{Exercise 2}
+	
+	\subsection{Heap}
+	
+	We define a new heap type S
+	
+	(S,Type,Ref)
+	
+	Type is a value that represents the type of the reference Ref. If the type does not contain any data Ref is 0.
+	
+	\subsection{Instructions}
+	
+	We keep the tow instructions simple
+	
+	construct Type
+	
+	\begin{lstlisting}
+		S[SP] = new (S, Type, S[SP])
+	\end{lstlisting}
+	
+	deconstruct
+	
+	\begin{lstlisting}
+		if ( S[SP] == (S,Type,Ref)) {
+			S[SP+1] = Ref;
+			S[SP+2] = Type;
+			SP+=2;
+		}
+	\end{lstlisting}
+	
+	\subsection{CodeGen}
+	
+	\begin{lstlisting}[mathescape]
+		mkvec 0
+		mkfunval F
+		jump callF
+
+	F:
+		deconstruct
+		dup
+		cmp \psi(A)
+		jumpz caseB
+		
+	caseA:
+		pop
+		getbasic
+		jump doneMatch
+	
+	caseB:
+		dup
+		cmp \psi(B)
+		jumpz caseC
+		pop
+		getvector
+		
+		
+		mark 2
+		pushglob 0
+		pushloc 1
+		apply
+	1:
+		mark 2
+		pushglob 0
+		pushloc 3
+		apply
+	2:	
+		sum
+		slide 2
+		jumpz doneMatch
+		
+	caseC:
+		cmp \psi(C)
+		jumpz explode
+		
+		pushc 0
+		
+	doneMatch:
+		return 0
+	
+	explode:
+		error "unmatched case"
+		
+	callF:
+		mark end
+		
+		pushc 4
+		pushc 0
+		construct \psi(C)
+		mkvec 2
+		construct \psi(A)
+		construct \psi(B)
+		
+		pushloc 1
+		apply
+		
+	end:
+		slide 1
+	\end{lstlisting}
+	
+\end{document}

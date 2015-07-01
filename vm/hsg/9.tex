@@ -1,0 +1,186 @@
+\documentclass[10pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{listings}
+
+\title{Execrcise sheet 9}
+\author{Savu Victor-Gabriel}
+
+\begin{document}
+	\maketitle
+	
+\section{Exercise 1}
+	
+\subsection{a}
+	
+	\begin{lstlisting}
+oddN(X) :- 1 is mod(X,2).
+
+odd([], []).
+
+odd([X|XT], [X|RT]) :-
+	oddN(X),
+	odd(XT,RT).
+
+odd([X|XT], RT) :-
+	not(oddN(X)),
+	odd(XT,RT).
+	\end{lstlisting}
+
+\subsection{b}
+
+	\begin{lstlisting}
+last([X],X).
+
+last([\_|R],Y) :- last(R, Y).
+	\end{lstlisting}
+
+\subsection{c}
+
+	\begin{lstlisting}
+remove(_, [], []).
+
+remove(X, [E|XL], [E|RL]) :-
+	not(X is E),
+	remove(X, XL, RL).
+
+remove(X, [E|XL], RL) :-
+	X is E,
+	remove(X, XL, RL).
+	\end{lstlisting}
+	
+\section{Exercise 2}
+
+\begin{enumerate}
+	\item[a.] ok
+	
+	X/f(a, b)
+	
+	Y/a
+	
+	Z/b
+	
+	\item[b.] not ok
+	
+	a != b
+	
+	\item[c.] ok
+	
+	X/f(a, a)
+	
+	Y/f(a, a)
+	
+	\item[d.] not ok
+	
+	X/f(Y)
+	
+	Y/g(a, Z)
+	
+	Z/f(V)
+	
+	V/g(Y, Z) -- V appears on the right side
+	
+	\item[e.] ok
+	
+	U/b
+	
+	X/c
+	
+	V/e
+	
+	Y/f
+	
+	W/h
+	
+	Z/j
+	
+	\item[f.] not ok
+	
+	X/Y
+	
+	Y/c
+	
+	Z/a
+	
+	X/7 -- X already bound to c
+\end{enumerate}
+
+\section{Exercise 3}
+
+\subsection{a}
+
+	\begin{lstlisting}
+putvar 1
+putatom a
+putvar 2
+putstruct g/2
+putref 1
+putref 2
+putstruct g/2
+putstruct f/3
+	\end{lstlisting}
+
+\subsection{b}
+
+\begin{lstlisting}
+putvar 1
+putref 2
+putanon
+putstruct h/2
+putatom b
+putstruct g/3
+putvar 3
+putstruct f/2
+putstruct p/1
+\end{lstlisting}
+
+\section{Exercise 4}
+
+\begin{lstlisting}
+people(Hs) :-
+	length(Hs, 4),
+	member(h(c, windows), Hs),
+	Hs = [h(java,_),_,h(_,mac),_],
+	not(Hs = [_,_,_,h(_,mac)]),
+	not(Hs = [_,_,_,h(ocaml,_)]),
+	member(h(scala,_), Hs),
+	member(h(ocaml,_), Hs),
+	member(h(_,linux), Hs),
+	member(h(_,openbsd), Hs).
+
+namep(0, alice).
+namep(1, bob).
+namep(2, carol).
+namep(3, dave).
+
+indexOf([Element|_], Element, 0).
+	indexOf([_|Tail], Element, Index):-
+	indexOf(Tail, Element, Index1),
+	Index is Index1+1.
+
+solution(J,C,O,S,W,L,M,B) :-
+	people(Hs),
+	indexOf(Hs, h(java,_),Ji),
+	namep(Ji,J),
+	indexOf(Hs, h(c,_),Ci),
+	namep(Ci, C),
+	indexOf(Hs, h(ocaml,_),Oi),
+	namep(Oi, O),
+	indexOf(Hs, h(scala,_),Si),
+	namep(Si, S),
+	
+	indexOf(Hs, h(_,windows),Wi),
+	namep(Wi, W),
+	indexOf(Hs, h(_,linux),Li),
+	namep(Li, L),
+	indexOf(Hs, h(_,mac),Mi),
+	namep(Mi, M),
+	indexOf(Hs, h(_,openbsd),Bi),
+	namep(Bi, B).
+\end{lstlisting}
+
+\end{document}
