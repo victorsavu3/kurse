@@ -18,7 +18,7 @@
 \maketitle
 
 \begin{abstract}
-	In this paper we present multiple methods that have used symbolic execution in order to test or prove properties of non-sequential applications in different fields. Each approach has a distinct process and we will analyse its advantages and disadvantages while considering that some attempt to only reach a focused goal.
+	In this paper we present multiple methods that have used symbolic execution in order to test or prove properties of non-sequential applications in different fields. Each approach has a distinct process based on concolic execution and we will analyse its advantages and disadvantages, considering the applicability of the method, the required skill to use it, the covered inputs, the level of automation and how it has achieved its stated goals. Selected examples from the papers will also be used to create a clearer picture about what can be achieved.
 \end{abstract}
 
 \section{Introduction}
@@ -46,43 +46,57 @@ This paper considers symbolic execution in the context of non-sequential applica
 
 Fortunately there are many methods to deal with this problem such as DVC \cite{dvc} and iterative context bounding scheduling \cite{musuvathi2007iterative}.
 
-\subsubsection{Dynamic vector clocks (DVC)} are a method to eliminate the need to analyse all possible thread interleavings, but still do a complete analysis.
+\subsubsection{Dynamic vector clocks (DVC)} are a method to eliminate the need to analyse all possible thread interleavings, but still do a complete analysis of an application.
 
-We represent the execution of a program $P$ as a sequence of events $(t, l, m, a)$ where $t$ is a thread, $l$ is the label of an instruction, $m$ is a shared memory location and $a$ is the type of access [$r$ (read), $w$ (write), $l$ (lock), $u$ (unlock)]. If a instruction does not involve memory $m$ and $a$ are $\bot$.
+We represent the execution of a program $P$ as a ordered sequence of events, each represented as $(t, l, m, a)$, where $t$ is a thread, $l$ is the label of an instruction, $m$ is a shared memory location and $a$ is the type of access [$r$ (read), $w$ (write), $l$ (lock), $u$ (unlock)]. If a instruction does not involve memory $m$ and $a$ are $\bot$.
 
-In all paths $\pi \in $\textbf{Ex}$(P)$ two events can be \emph{sequentially related} $e \triangleleft e'$ if intuitively $e'$ always happens after $e$ in the same thread. $e \parallel e'$ iff $e \ntriangleleft e'$ and $e' \ntriangleleft e$. Events can also be \emph{race related} $e \lessdot e'$ if $e \parallel e'$, they access the same memory and intuitively could happen in parallel, but $e$ is first in this execution. Using these two partial orderings we can define the \emph{causal relation} $\preceq$ as $\triangleleft \cup \lessdot$.
+Let $\textbf{Ex}(P)$ be the set of all feasible execution paths trough a program $P$ then $\forall \pi \in \textbf{Ex}(P)$ two events can be \emph{sequentially related} $e \triangleleft e'$ if intuitively $e'$ always happens after $e$ in the same thread. $e \parallel e'$ iff $e$ and $e'$ are not sequentially related ($e \ntriangleleft e' \bigwedge e' \ntriangleleft e$).
 
-Using the \emph{causal relation} we create equivalence classes for the set of executions \textbf{Ex} and define the \emph{representative set of executions} \textbf{REx} as the set that contains only one instance of each class. For all statements reachable in P there exists $\pi \in$ \textbf{REx} such that the statement is executed in $\pi$ \cite[§4]{base4}.
+Events can also be \emph{race related} ,$e \lessdot e'$, if $e \parallel e'$ and they access the same memory. Intuitively $e'$ happens after $e$, but the reversal is also possible and it has an effect on the execution. Using these two partial orderings we can define the \emph{causal relation} $e \preceq e' \textbf{ iff } e \triangleleft e' \bigvee e \lessdot e'$.
 
-Dynamic vector clocks are used to determine which statements are in a causal relationship. They are created by executing the following for each event $(t, l, m, a)$ and initializing all clocks to $0$.
+Using the \emph{causal relation} we create equivalence classes for \textbf{Ex} and define the \emph{representative set of executions} \textbf{REx} as one of the sets that contains only one instance of each class. For each statement reachable in P there exists $\pi \in$ \textbf{REx} such that the statement is executed in $\pi$ \cite[§4]{base4}.
 
-\begin{itemize}
-	\item if $a = r$ or $w$ or $l$ or $u$ then $V_t \leftarrow V_t + 1$
-	\item if $a = r$ then $V_t \leftarrow max \left\lbrace V_t, V_m^w \right\rbrace$ and $V_m^a \leftarrow max \left\lbrace V_m^a, V_t \right\rbrace$
-	\item  if $a = w$ or $l$ or $u$ then $V_m^w \leftarrow V_m^a \leftarrow V_t \leftarrow max \left\lbrace V_m^a, V_t \right\rbrace$
-	\item if $e$ is of the form $fork(t)$ then $V_{t'} \leftarrow V_t$ and $V_t \leftarrow V_t + 1$ and $V_{t'} \leftarrow V_{t'} + 1$
-\end{itemize}
+Dynamic vector clocks are used to determine which statements are in a causal relationship. The following notation is used:
 
-The DVC of a event $V_e$ is $V_t$ right after e has been executed. After this has been computed the following hold \cite[§4]{base4}:
+\begin{description}
+	\item[$V_t$] The dynamic vector clock of a thread t
+	\item[$V_e$] The dynamic vector clock of an event e
+	\item[$V_m^x$] The dynamic vector clock of a memory location m and the access type denoted by x, $x \in {a, w}$
+\end{description}
+
+The following algorithm is executed for each event $(t, l, m, a)$ after initializing all clocks to $0$ in order to compute the DVCs.
+
+\begin{enumerate}
+	\item if $a \in \left\lbrace r, w, l \right\rbrace$ then $V_t \leftarrow V_t + 1$.
+	\item if $a = r$ then $V_t \leftarrow max \left\lbrace V_t, V_m^w \right\rbrace$ and $V_m^a \leftarrow max \left\lbrace V_m^a, V_t \right\rbrace$.
+	\item  if $a  \in \left\lbrace w, l, u \right\rbrace$ then $V_m^w \leftarrow V_m^a \leftarrow V_t \leftarrow max \left\lbrace V_m^a, V_t \right\rbrace$.
+	\item if $l$ points to a instruction of the form $fork(l_2)$ then $V_{t'} \leftarrow V_t$ and $V_t \leftarrow V_t + 1$ and $V_{t'} \leftarrow V_{t'} + 1$, where $t'$ is the newly created thread.
+\end{enumerate}
+
+The DVC of a event $V_e$ is $V_t$ right after e has been executed. After this has been computed the following hold \cite[§4]{base4}, the proof can be found in \cite{dvcproof}:
 
 \begin{itemize}
 	\item $e \preceq e'$ if $V_e \leq V_{e'}$
 	\item $e \lessdot e'$ if $V_e \leq V_{e'}$ and $V_{prev(e')} \neq V_e$, prev(e) is the event that precedes e
 \end{itemize}
 
-These properties help to check which events always happen in a specific order or if they could be reversed in another scheduling and if such a reversal would have an effect on the result of the execution.
+These properties help to check which events always happen in a specific order or if they could be reversed in another scheduling and if such a reversal would have an effect on the result of the execution. This method is combined with symbolic execution in the approach covered in §\ref{approach2}.
 
-\subsubsection{Iterative context bounding}
+\subsubsection{Iterative context bounding \cite{Musuvathi}}
 
-is a very simple search strategy that allows the analysis of applications to find most bugs faster. It assumes that a context switch may only happen when a thread is preempted or it goes to sleep and limits the number of preemptions to a fixed value $c$ during symbolic execution. If all possible executions do not present bugs it proves that $c+1$ preeptions are required for one to happen. The power of this algorithm comes from the fact that even with a bound of 0 the execution will either terminate or deadlock because the choices of the scheduler are not bounded during normal execution. 
+is a very simple search strategy that allows the analysis of applications to find most bugs faster compared to a exhaustive search. It assumes that a context switch may only happen when a thread is preempted or when it goes to sleep and limits the number of preemptions during the execution of the program to a fixed value $c$. If all possible executions do not present bugs it proves that $c+1$ preemptions are required for one to happen. If $c$ is higher than the maximum number of instructions between thread sleeps the analysis becomes equivalent to an exhaustive search.
 
-A very important property when applying iterative context bounding is the fact that the number of executions of a program $P$ is polynomial in regards to $k$, the number of steps a thread takes and exponential in $c$ \cite{iterativecontextbound}. Since most concurrency bugs happen when a small number of preemptions ($ < 8$ \cite[§4.1]{iterativecontextbound}) are present makes this a very desirable property.
+The power of this algorithm comes from the fact that even with a bound of 0 the program that is executed will still terminate due to the fact that the choices done by the scheduler at thread wake-up are not bound in any way, only preemptions are affected.
+
+A very important property when applying iterative context bounding is the fact that the number of executions of a program is polynomial in regards to the number of steps a thread takes and exponential in $c$ \cite{iterativecontextbound}. Since most concurrency bugs happen when a small number of preemptions ($ < 8$ \cite[§4.1]{iterativecontextbound}) are present makes this a very desirable property.
 
 \subsection{Concolic testing}
 
-Concolic testing is a technique used in symbolic execution that focuses more on finding bugs instead of proving program correctness. It involves running the application with a concrete input and then using a \emph{satisfiability modulo theories} (SMT) solver in order to generate a new input.
+Concolic testing is a technique used in symbolic execution that focuses more on finding bugs instead of proving program correctness. It involves running the application with a concrete input and then using a \emph{satisfiability modulo theories} (SMT) solver on the path condition in order to generate a new input for subsequent execution.
 
-The execution during concolic testing uses the normal instructions of the environment, but all branches are added to the path condition. In order to generate a new input one of the branch conditions is inverted and the new system is solved. All paths of a program are considered only if the SMT solver is sufficiently powerful and as such program correctness can not always be proven.
+The execution during concolic testing uses the normal instructions of the environment, but all branches are added to the path condition. After the execution completes, one of the branches is inverted and the new path condition is used to generate a new input. All paths of a program are considered only if the SMT solver is sufficiently powerful and as such program correctness can not always be proven.
+
+This technique is very practical as the tester gets the input that triggered each specific bug. This allows new tests to be written easily and some tools allow them to be generated automatically.
 
 There are multiple tools that implement concolic testing and we will present some interesting results in §\ref{approaches}:
 
@@ -185,7 +199,7 @@ compute_next_input_and_schedule(n, input, path, branch_hist)
 	\item[return] (new \textbf{input}, new \textbf{path}, new \textbf{branch\_hist}, is it done?).
 \end{description}
 
-The efficient algorithm executes a application to the end and then tries to change a step in the execution to follow a different path. It first tries to find a new schedule that flips two events that are in a race condition and if it is unable to find one, a new input is chosen so that different branches are taken. The efficient algorithm tests all feasible paths if properties hold:
+The efficient algorithm executes a application to the end and then tries to change a step in the execution to follow a different path. It first tries to find a new schedule that flips two events that are in a race condition and if it is unable to find one, a new input is chosen so that different branches are taken. DVC are calculated during execution and are the ones that provide information about races. The efficient algorithm tests all feasible paths if properties hold:
 
 \begin{itemize}
 	\item The program terminates
@@ -234,8 +248,9 @@ From the concurrency perspective this approach is very simple. It simply uses JP
 The biggest advantage of this method is the ability to test functions with unbounded input and to prove that they are correct in all circumstances. Another advantage is the generation of actual test data in case a error is found by using \emph{Korat}. A large disadvantage is the fact that programs with many primitive values will fall back to normal symbolic execution and model checking, so this approach is only suitable for some applications.
 
 \subsection{GKLEE: concolic verification and test generation for GPUs \cite{base7}}
+\label{approach3}
 
-This paper presents \emph{GKLEE}, a extention of \emph{KLEE} \cite{klee} that has been designed to analyse CUDA \cite{cuda} programs. GPU (Graphics processing unit) programs, also called kernels, are massively concurrent and this implementation is able to deal with this by using the semantics of the device to drastically reduce the amount of interleavings that must be tested.
+This paper presents \emph{GKLEE}, a extension of \emph{KLEE} \cite{klee} that has been designed to analyse CUDA \cite{cuda} programs. GPU (Graphics processing unit) programs, also called kernels, are massively concurrent and this implementation is able to deal with this by using the semantics of the device to drastically reduce the amount of interleavings that must be tested.
 
 We will shortly present some concepts of CUDA that are required to understand the rest of this section:
 
@@ -271,7 +286,7 @@ This implementation is able to find a surprising amount of problems in applicati
 		Subtle bug that only occurs when optimizations are turned on. Only CUDA 5.x applies this optimization.
 \end{description}
 
-These problems are very hard to detect using traditional methods such as testing and debugging as they are only triggered on a specific scheduling and hardware. The presented performance bottlenecks, \emph{Shared memory bank conflicts} or \emph{Non-coalesced Device Memory Accesses}, are also very useful, especially since they are individualized for hardware and CUDA version.  Some examples of tested kernels are provided in Fig. \ref{example:7}.
+These problems are very hard to detect using traditional methods such as testing and debugging as they are only triggered on a specific scheduling and hardware. The presented performance bottlenecks, \emph{Shared memory bank conflicts} or \emph{Non-coalesced Device Memory Accesses}, are also very useful, especially since they are individualized for hardware and CUDA version.  Some examples of tested kernels are provided in Fig. \ref{example:7}. The table shows that the tool can find race conditions and shows the amount of performance loss due to bad memory access patterns.
 
 \begin{figure}
 	\centering
@@ -283,10 +298,12 @@ These problems are very hard to detect using traditional methods such as testing
 		
 		Bitonic Sort & & yes & 4 & 0\% & 0\% & 60\% \\
 		Bisect Small & WW & - & 16 & 15\% & 0\% & 53\% \\
-		Scan Best & & yes & 32 & 71\% & 71\% & 71\%
+		Scan Best & & yes & 32 & 71\% & 71\% & 71\% \\
+		Matrix multiplication & & yes & 64 & 0\% & 0\% & 0\% \\
+		Bisect small & WW & - & 16 & 38\% & 0\% & 43\% \\
 	\end{tabular}
 	
-	\caption{Example of tested software, taken from \cite{base7}}
+	\caption{Example of software tested with approach §\ref{approach3}, taken from \cite{base7}}
 	\label{example:7}
 \end{figure}
 
@@ -303,7 +320,15 @@ As we have presented there are multiple methods that apply symbolic execution to
 
 \emph{GKLEE: concolic verification and test generation for GPUs \cite{base7}} is a very capable implementation, but it is very limited in scope and can not be extended to test other types of applications. Some concepts could be adapted to other similar architectures, especially the canonical scheduling.
 
-Fig. \ref{comp table} gives a tabular overview of the presented methods and their capabilities and limitations. As can be seen the choice for the implementation is as diverse as the platforms covered.
+Fig. \ref{comp table} gives a tabular overview of the presented methods and their capabilities and limitations. As can be seen the choice for the implementation is as diverse as the platforms covered. 
+
+From a concurrency perspective, \emph{Generalized Symbolic Execution for Model Checking and Testing \cite{base5}} brings the least innovation, but its approach for data can be applied to most other tools. 
+
+In contrast \emph{Concolic Testing of Multithreaded Programs and Its Application to Testing Security Protocols} \cite{base4} is entirely concentrated to improving this aspect and achieves its goals using DVC. The performance gains from this approach are substantial and allow many more applications to be analyzed using symbolic execution and can help uncover a large amount of faults.
+
+\emph{Parallel Symbolic Execution for Automated Real-World Software Testing} \cite{base3} fully implements POSIX and as such can be used to test most existing concurrent applications without modification. Coupled with the ability to distribute the work across multiple machines makes it a very useful tool during development and testing. The flexibility provided by choosing the accuracy of the analysis is also a big advantage compared to the other methods.
+
+\emph{GKLEE: concolic verification and test generation for GPUs \cite{base7}} shows that a specialized tool can achieve more that a general approach. Using the properties of CUDA hardware it is able to reduce the amount of work required to analyse a concurrent application considerably, making it possible to test the massively threaded kernels in a reasonable amount of time.
 
 In this authors opinion all techniques described in the presented papers offer some improvement to the field of concolic testing, but \emph{Parallel Symbolic Execution for Automated Real-World Software Testing \cite{base3}} is the most useful approach. It is the only one able to analyse large practical applications and could be extended to apply the improvements from \cite{base4} and \cite{base5}. Its low requirements from the perspective of the tester makes it very attractive to existing software that intends to extend its testing suite which would considerably improve its quality.
 
@@ -327,17 +352,18 @@ In this authors opinion all techniques described in the presented papers offer s
 	
 	\vspace{1cm}
 	
-	Parallelism
+	Concurrency
 	
 	\vspace{5mm}
 	
-	\begin{tabular}{l l l l l}
-		& & Scalability & Complete analysis & Fast partial results\\
+	\begin{tabular}{l l l l l l}
+		& & Scalability to  &  Scalability to & Complete analysis & Fast partial results \\
+		& & multiple threads & more data & & \\
 		\hline
-		§2.3 & \cite{base3} & high & possible/very slow & yes \\
-		§2.4 & \cite{base4} & high & possible/unlikely & yes\\
-		§2.5 & \cite{base5} & low & yes & no \\
-		§2.7 & \cite{base7} & very high & yes & no \\
+		§2.3 & \cite{base3} & medium & high & possible/very slow & yes \\
+		§2.4 & \cite{base4} & high & medium & possible/unlikely & yes\\
+		§2.5 & \cite{base5} & low & medium & yes & no \\
+		§2.7 & \cite{base7} & very high & low & yes & no \\
 	\end{tabular}
 	
 	\caption{Comparison Tables}
