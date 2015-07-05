@@ -196,5 +196,129 @@ mul(X, Y, Z) $\leftarrow$ X = succ(XX), add(ZZ, Y, Z), mul(XX, Y, ZZ).
 	
 	\section{Exercise 5}
 	
+	\begin{lstlisting}[mathescape]
+app/3:
+	setbtp
+	try app1
+	try app2
+	delbtp
+	jump appf
+	
+app1:
+	pushenv 0
+	
+	putvar 1
+	uatom []
+	
+	pushvar 2
+	uvar 3
+	
+	popenv
+app2:
+	pushenv 4 // $X', Y', Z', H$
+	
+	pushvar 1
+	unstruct []/2 a2A
+	son 1
+	uvar 7
+	son 2
+	uvar 4
+	up a2B
+a2A:
+	check
+	pushvar 7
+	pushvar 4
+	putstruct []/2
+	bind
+a2B:
+	
+	pushvar 2
+	unstruct []/2 a2C
+	son 1
+	uvar 7
+	son 2
+	uvar 6
+	up a2D
+a2C:
+	check
+	pushvar 7
+	pushvar 6
+	putstruct []/2
+	bind
+a2D:	
+	
+	mark a2E	
+	putref 4
+	putref 2
+	putref 5
+	call app/3
+a2E:
+	
+	popenv
+appf:
+
+	mark N
+	pushref 1
+	pushref 2
+	pushatom c
+	putstruct []/2
+	pushatom a
+	pushatom b
+	putstruct []/2
+	pushref 3
+	putstruct []/2
+	call app/3
+
+N:
+	halt
+	\end{lstlisting}
+	
 	\section{Exercise 6}
+	
+	\begin{lstlisting}
+p/0:
+	setbtp
+	pushenv 3
+	
+	pushref 1
+	unstruct f/2 fA
+	son 1
+	pushref 2
+	son 2
+	pushref 3
+	up fB
+fA:
+	check
+	pushvar 2
+	pushvar 3
+	putstruct f/2
+	bind
+fB:	
+
+	pushref 2
+	unstruct g/2 gA
+	son 1
+	pushref 3
+	son 2
+	pushref 3
+	up gB
+gA:
+	check
+	pushvar 3
+	pushvar 3
+	putstruct g/2
+	bind
+gB:	
+	
+	pushref 3
+	uatom a
+	delbtp
+	jump pf
+
+pf:
+	mark N
+	call p/0
+N:
+	halt
+	\end{lstlisting}
 \end{document}
