@@ -1,0 +1,200 @@
+\documentclass[10pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{listings}
+
+\title{Execrcise sheet 10}
+\author{Savu Victor-Gabriel}
+
+\begin{document}
+	\maketitle
+	
+	\section{Exercise 1}
+	
+	\begin{itemize}
+		\item[a)] $f(A, B, C, D, A)$ and $f(B, C, D, a, D)$
+		\item[b)] As long as the number of variables - 1
+	\end{itemize}
+	
+	\section{Exercise 2}
+	
+	Possibilities:
+	
+	$X = a$
+	
+	(1)
+	
+	$X = b$
+	
+	(1) (2)
+	
+	if $r(X, Y)$ is true then everything stops at 3
+	
+	$X = f(a)$
+	
+	(1) (2) (3) (4)
+	
+	$X = f(b)$
+	
+	(1) (2) (3) (4)
+	
+	otherwise
+	
+	(1) (2) (3) (4) (5)
+	
+	\section{Exercise 3}
+	
+	\begin{lstlisting}[mathescape]
+
+p(X) ...
+q(X) ...
+
+r(X) $\leftarrow$ p(X), not(q(X)), !.
+r(X) $\leftarrow$ q(X), not(p(X)), !.
+
+	\end{lstlisting}
+	
+	\section{Exercise 4}
+	
+	\subsection{Translation}
+	
+	\begin{lstlisting}
+
+less/2:
+	setbtp
+	try less1
+	try less2
+	delbtp
+	jump lessf
+	
+less1:
+	pushenv 0
+
+	putvar 1
+	uatom 0
+	
+	putvar 2
+	unstruct succ/1 l1A
+	son 1
+	pop
+	up l1B
+l1A:
+	check
+	putanon
+	putstruct succ/1
+	bind
+l1B:
+	popenv
+	
+less2:
+	pushenv 2
+	
+	putref 1
+	unstruct succ/1 l2A
+	son 1
+	putvar 3
+	up l2B
+l2A:
+	check
+	putref 3
+	putstruct succ/1
+	bind
+l2B:
+	
+	putref 2
+	unstruct succ/1 l2C
+	son 1
+	putvar 4
+	up l2D
+l2C:
+	check
+	putref 4
+	putstruct succ/1
+	bind
+l2D:
+
+	putvar 4
+	call succ/1
+
+	mark l2E
+	putref 3
+	putref 4
+	call less/2
+l2E:
+	popenv
+lessf:
+
+add/3:
+	setbtp
+	try add1
+	try add2
+	delbtp
+	jump addf
+add1:
+	pushenv 0
+	
+	putvar 1
+	uatom 0
+	
+	putvar 2
+	uref 3
+	
+	popenv
+add2:
+	pushenv 2
+	
+	putref 1
+	unstruct succ/1 a2A
+	son 1
+	putvar 4
+	up l2B
+a2A:
+	check
+	putref 4
+	putstruct succ/1
+	bind
+a2B:
+	
+	putref 3
+	unstruct succ/1 a2C
+	son 1
+	putvar 5
+	up a2D
+a2C:
+	check
+	putref 5
+	putstruct succ/1
+	bind
+a2D:
+	
+	mark a2E	
+	putref 4
+	putref 2
+	putref 3
+	call add/3
+
+a2E:
+	popenv
+
+addf:
+
+
+	\end{lstlisting}
+	
+	\subsection{Multiplication}
+	
+	\begin{lstlisting}[mathescape]
+
+mul(X, Y, Z) $\leftarrow$ X = 1, Z = Y.
+mul(X, Y, Z) $\leftarrow$ X = succ(XX), add(ZZ, Y, Z), mul(XX, Y, ZZ).
+
+	\end{lstlisting}
+	
+	\section{Exercise 5}
+	
+	\section{Exercise 6}
+\end{document}
